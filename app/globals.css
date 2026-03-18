@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:        #F5F3EF;
+  --surface:   #FFFFFF;
+  --surface2:  #EDEBE6;
+  --surface3:  #E2DFD9;
+  --border:    rgba(26,25,23,0.06);
+  --border2:   rgba(26,25,23,0.11);
+  --txt:       #1A1917;
+  --txt2:      #6B6860;
+  --txt3:      #9C9889;
+  --accent:    #C0582E;
+  --accent-bg: #FAF0EB;
+  --green:     #4A7C59;
+  --green-bg:  #EEF5F0;
+  --red:       #B94A48;
+  --red-bg:    #FAF0EF;
+  --blue:      #5B6ABF;
+  --blue-bg:   #F0F1FA;
+  --gold:      #C49132;
+  --gold-bg:   #FAF5EB;
+  --purple:    #8B5CB0;
+  --purple-bg: #F6F0FA;
+  --nav-bg:    rgba(255,255,255,0.85);
+  --shadow-sm: 0 1px 3px rgba(26,25,23,0.04), 0 1px 2px rgba(26,25,23,0.02);
+  --shadow:    0 4px 12px rgba(26,25,23,0.06), 0 1px 3px rgba(26,25,23,0.03);
+  --shadow-lg: 0 8px 24px rgba(26,25,23,0.08), 0 2px 6px rgba(26,25,23,0.04);
+  --radius:    20px;
+  --radius-sm: 12px;
+  --font:      'Manrope', system-ui, sans-serif;
+  --font-serif:'Fraunces', Georgia, serif;
+}
+
+[data-theme="dark"] {
+  --bg:        #0C0C0B;
+  --surface:   #171715;
+  --surface2:  #1F1F1C;
+  --surface3:  #2A2A26;
+  --border:    rgba(232,229,223,0.06);
+  --border2:   rgba(232,229,223,0.10);
+  --txt:       #E8E5DF;
+  --txt2:      #9C9889;
+  --txt3:      #5C5850;
+  --accent:    #D9764A;
+  --accent-bg: #1E140E;
+  --green:     #6A9E79;
+  --green-bg:  #0E1A11;
+  --red:       #D06B69;
+  --red-bg:    #1E100F;
+  --blue:      #7B89D4;
+  --blue-bg:   #101220;
+  --gold:      #D9A84C;
+  --gold-bg:   #1A1508;
+  --purple:    #A87DCA;
+  --purple-bg: #170E20;
+  --nav-bg:    rgba(12,12,11,0.85);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow:    0 2px 10px rgba(0,0,0,0.35);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.45);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--txt);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s ease, color 0.3s ease;
+  overscroll-behavior: none;
+  letter-spacing: -0.01em;
+}
+
+input, textarea, select, button {
+  font-family: var(--font);
+}
+
+::-webkit-scrollbar { width: 0; }
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0.3;
+  cursor: pointer;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes bgFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.02); }
+}
+
+.fade-up  { animation: fadeUp 0.35s ease both; }
+.slide-up { animation: slideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 6px;
+}
+
+/* ── Hero card noise texture ── */
+.hero-texture {
+  position: relative;
+  overflow: hidden;
+}
+.hero-texture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px;
+  pointer-events: none;
+  border-radius: inherit;
+}
