@@ -131,24 +131,34 @@ export default function App() {
 
         {tab === "exp" && (
           <>
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-              {[["challenge", "Эксперименты"], ["calendar", "Календарь"]].map(([id, label]) => (
-                <button
-                  key={id}
-                  onClick={() => setExpTab(id)}
-                  style={{
-                    flex: 1, padding: "8px 0",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: 13, fontWeight: 500, cursor: "pointer",
-                    transition: "all .15s",
-                    border: `1px solid ${expTab === id ? "var(--accent)" : "var(--border2)"}`,
-                    background: expTab === id ? "var(--accent-bg)" : "transparent",
-                    color: expTab === id ? "var(--accent)" : "var(--txt2)",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+            <div style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              marginBottom: 14, padding: "0 2px",
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
+                Опыты
+              </p>
+              <div style={{ display: "flex", gap: 4, background: "var(--surface2)", borderRadius: "var(--radius-sm)", padding: 3 }}>
+                {[["challenge", "Эксперименты"], ["calendar", "Календарь"]].map(([id, label]) => (
+                  <button
+                    key={id}
+                    onClick={() => setExpTab(id)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 9,
+                      fontSize: 12, fontWeight: expTab === id ? 600 : 400,
+                      cursor: "pointer",
+                      transition: "all .15s",
+                      border: "none",
+                      background: expTab === id ? "var(--surface)" : "transparent",
+                      color: expTab === id ? "var(--txt)" : "var(--txt3)",
+                      boxShadow: expTab === id ? "var(--shadow-sm)" : "none",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             {expTab === "challenge" && <ChallengeWidget />}
             {expTab === "calendar"  && <CalendarWidget />}

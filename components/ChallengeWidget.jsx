@@ -190,8 +190,11 @@ export default function ChallengeWidget() {
       </Card>
 
       {/* New experiment */}
-      <button onClick={() => setCreating(true)} style={{ width: "100%", padding: "12px", borderRadius: "var(--radius)", border: "1px dashed var(--border2)", background: "transparent", color: "var(--txt2)", fontSize: 13, fontWeight: 500, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "border-color .15s" }}>
-        <span style={{ fontSize: 14 }}>+</span> Новый эксперимент
+      <button onClick={() => setCreating(true)} style={{ width: "100%", padding: "13px", borderRadius: "var(--radius-sm)", border: "1px dashed var(--border2)", background: "transparent", color: "var(--txt2)", fontSize: 13, fontWeight: 500, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s" }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = ""; e.currentTarget.style.color = ""; }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 300 }}>+</span> Новый эксперимент
       </button>
 
       <ConfirmSheet
