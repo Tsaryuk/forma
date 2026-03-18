@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useTheme, useLocalState } from "@/lib/hooks";
+import { useState, useEffect, useRef } from "react";
+import { useTheme, useLocalState, useSupaSync } from "@/lib/hooks";
 import { calcDailyScore } from "@/lib/helpers";
 import { DEFAULT_FORMS } from "@/lib/data";
 
@@ -65,9 +65,43 @@ export default function App() {
   const [tab, setTab] = useState("today");
   const [forms, setForms] = useLocalState("forma_forms", DEFAULT_FORMS);
   const [userName, setUserName] = useLocalState("forma_user", null);
+  const { profile, ensureProfile, loadForms, saveForms, onIdsUpdated } = useSupaSync();
+  const initialLoadDone = useRef(false);
 
   const score = calcDailyScore(forms);
   const [expTab, setExpTab] = useState("challenge");
+
+  // Handle ID mapping when new forms get UUIDs from Supabase
+  useEffect(() => {
+    onIdsUpdated.current = (idMap) => {
+      setForms(fs => fs.map(f => idMap[f.id] ? { ...f, id: idMap[f.id] } : f));
+    };
+  }, []);
+
+  // Sync: load forms from Supabase on first login
+  useEffect(() => {
+    if (!userName || initialLoadDone.current) return;
+    initialLoadDone.current = true;
+
+    (async () => {
+      const p = await ensureProfile(userName);
+      if (!p) return;
+      const dbForms = await loadForms(p.id);
+      if (dbForms && dbForms.length > 0) {
+        setForms(dbForms);
+      } else {
+        // First time — push default forms to Supabase
+        saveForms(forms, p.id);
+      }
+    })();
+  }, [userName]);
+
+  // Sync: save forms to Supabase on every change
+  useEffect(() => {
+    if (profile?.id && initialLoadDone.current) {
+      saveForms(forms, profile.id);
+    }
+  }, [forms, profile?.id]);
 
   if (!userName) {
     return <Onboarding onComplete={(name) => setUserName(name)} />;
