@@ -1,6 +1,7 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useLocalState } from "@/lib/hooks";
+import { askClaude } from "@/lib/helpers";
 import { Card, Sheet, BigBtn, SectionLabel } from "@/components/ui";
 
 const EMOTIONS = [
@@ -25,6 +26,8 @@ export default function DiaryTab({ userName }) {
   const [emotion, setEmotion] = useState(null);
   const [text, setText] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [aiReply, setAiReply] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
   const recognitionRef = useRef(null);
 
   const todayEntry = entries.find(e => e.date === todayKey());
@@ -58,10 +61,7 @@ export default function DiaryTab({ userName }) {
         });
       }
     };
-    recognition.onerror = (e) => {
-      console.log("Speech error:", e.error);
-      setIsListening(false);
-    };
+    recognition.onerror = () => setIsListening(false);
     recognition.onend = () => {
       if (finalText.trim()) {
         setText(prev => {
@@ -84,6 +84,53 @@ export default function DiaryTab({ userName }) {
     setIsListening(false);
   }
 
+  async function analyzeEntry() {
+    if (!text.trim()) return;
+    setAnalyzing(true);
+    try {
+      const recentEntries = entries.slice(0, 5).map(e => {
+        const em = EMOTIONS.find(x => x.id === e.emotion);
+        return `${e.date}: ${em ? em.label : "?"} — ${e.text || "(без текста)"}`;
+      }).join("\n");
+
+      const result = await askClaude({
+        system: `Ты Фома — персонаж приложения Форма, маленький заботливый друг пользователя ${userName || "Друг"}.
+Твоя задача — дать короткий, тёплый ответ на запись дневника.
+Формат ответа — строго JSON:
+{
+  "emotion": "great|good|neutral|bad|awful",
+  "reply": "твой ответ (2-3 предложения, тёплый, с поддержкой или радостью)"
+}
+
+Правила:
+- Определи настроение из текста (emotion)
+- Ответ должен быть коротким, живым, без формальностей
+- Если плохое настроение — поддержи, не обесценивай
+- Если хорошее — порадуйся вместе
+- Можешь ссылаться на прошлые записи если видишь паттерн
+- Пиши на русском, можно 1 emoji`,
+        prompt: `Последние записи:\n${recentEntries || "(первая запись)"}\n\nСегодняшняя запись:\n"${text}"`,
+        max_tokens: 300,
+      });
+
+      try {
+        const cleaned = result.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed.emotion && EMOTIONS.find(e => e.id === parsed.emotion)) {
+          setEmotion(parsed.emotion);
+        }
+        if (parsed.reply) {
+          setAiReply(parsed.reply);
+        }
+      } catch {
+        setAiReply(result);
+      }
+    } catch (err) {
+      setAiReply("Не удалось проанализировать: " + err.message);
+    }
+    setAnalyzing(false);
+  }
+
   function save() {
     if (!emotion && !text.trim()) return;
     const key = todayKey();
@@ -91,6 +138,7 @@ export default function DiaryTab({ userName }) {
       date: key,
       emotion: emotion,
       text: text.trim(),
+      aiReply: aiReply || null,
       createdAt: new Date().toISOString(),
     };
     setEntries(prev => {
@@ -100,15 +148,18 @@ export default function DiaryTab({ userName }) {
     setShowNew(false);
     setEmotion(null);
     setText("");
+    setAiReply("");
   }
 
   function openNew() {
     if (todayEntry) {
       setEmotion(todayEntry.emotion);
       setText(todayEntry.text);
+      setAiReply(todayEntry.aiReply || "");
     } else {
       setEmotion(null);
       setText("");
+      setAiReply("");
     }
     setShowNew(true);
   }
@@ -150,7 +201,7 @@ export default function DiaryTab({ userName }) {
           const em = EMOTIONS.find(e => e.id === entry.emotion);
           return (
             <Card key={entry.date} style={{ padding: "14px 16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: entry.text ? 8 : 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: entry.text || entry.aiReply ? 8 : 0 }}>
                 <span style={{ fontSize: 12, color: "var(--txt3)", fontWeight: 500 }}>
                   {formatDate(entry.date)}
                 </span>
@@ -163,6 +214,21 @@ export default function DiaryTab({ userName }) {
                   {entry.text}
                 </p>
               )}
+              {entry.aiReply && (
+                <div style={{
+                  marginTop: 10, padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "var(--accent-bg)",
+                  borderLeft: "3px solid var(--accent)",
+                }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", marginBottom: 4 }}>
+                    Фома
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--txt)", lineHeight: 1.5, margin: 0 }}>
+                    {entry.aiReply}
+                  </p>
+                </div>
+              )}
             </Card>
           );
         })}
@@ -171,10 +237,111 @@ export default function DiaryTab({ userName }) {
       {/* ── New entry sheet ── */}
       <Sheet open={showNew} onClose={() => { setShowNew(false); stopVoice(); }} title={todayEntry ? "Изменить запись" : "Новая запись"}>
         <div style={{ padding: "0 4px" }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--txt2)", marginBottom: 10 }}>
-            Как настроение?
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--txt2)", marginBottom: 8 }}>
+            Что на уме?
           </p>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <div style={{ position: "relative", marginBottom: 12 }}>
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder="Расскажи о своем дне..."
+              rows={4}
+              style={{
+                width: "100%", padding: "12px 44px 12px 12px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                background: "var(--surface2)",
+                color: "var(--txt)", fontSize: 14,
+                resize: "vertical", outline: "none",
+                lineHeight: 1.5,
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+              }}
+            />
+            <button
+              onClick={isListening ? stopVoice : startVoice}
+              style={{
+                position: "absolute", right: 8, bottom: 8,
+                width: 36, height: 36, borderRadius: "50%",
+                border: "none", cursor: "pointer",
+                background: isListening ? "#EF4444" : "var(--accent)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all .15s",
+                animation: isListening ? "pulse 1.5s infinite" : "none",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </button>
+          </div>
+
+          {isListening && (
+            <p style={{ fontSize: 12, color: "#EF4444", textAlign: "center", marginBottom: 8, fontWeight: 500 }}>
+              Слушаю...
+            </p>
+          )}
+
+          {/* AI analyze button */}
+          {text.trim() && !aiReply && (
+            <button
+              onClick={analyzeEntry}
+              disabled={analyzing}
+              style={{
+                width: "100%", padding: "12px", marginBottom: 14,
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border2)",
+                background: "var(--surface2)",
+                color: "var(--txt)",
+                fontSize: 13, fontWeight: 500,
+                cursor: analyzing ? "wait" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                opacity: analyzing ? 0.6 : 1,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              {analyzing ? "Фома думает..." : "Спросить Фому"}
+            </button>
+          )}
+
+          {/* AI reply */}
+          {aiReply && (
+            <div style={{
+              marginBottom: 14, padding: "12px 14px",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--accent-bg)",
+              borderLeft: "3px solid var(--accent)",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>Фома</span>
+                <button
+                  onClick={() => { setAiReply(""); analyzeEntry(); }}
+                  disabled={analyzing}
+                  style={{
+                    padding: "2px 8px", borderRadius: 6,
+                    border: "1px solid var(--border2)", background: "var(--surface)",
+                    color: "var(--txt3)", fontSize: 10, cursor: "pointer",
+                  }}
+                >
+                  {analyzing ? "..." : "Ещё"}
+                </button>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--txt)", lineHeight: 1.6, margin: 0 }}>
+                {aiReply}
+              </p>
+            </div>
+          )}
+
+          {/* Emotion selector */}
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--txt2)", marginBottom: 8 }}>
+            Настроение {emotion && aiReply ? "(Фома предложил)" : ""}
+          </p>
+          <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
             {EMOTIONS.map(em => (
               <button
                 key={em.id}
@@ -199,54 +366,6 @@ export default function DiaryTab({ userName }) {
               </button>
             ))}
           </div>
-
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--txt2)", marginBottom: 8 }}>
-            Что на уме?
-          </p>
-          <div style={{ position: "relative", marginBottom: 16 }}>
-            <textarea
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder="Расскажи о своем дне..."
-              rows={4}
-              style={{
-                width: "100%", padding: "12px 44px 12px 12px",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--border)",
-                background: "var(--surface2)",
-                color: "var(--txt)", fontSize: 14,
-                resize: "vertical", outline: "none",
-                lineHeight: 1.5,
-                fontFamily: "inherit",
-                boxSizing: "border-box",
-              }}
-            />
-            <button
-              onClick={isListening ? stopVoice : startVoice}
-              style={{
-                position: "absolute", right: 8, bottom: 8,
-                width: 32, height: 32, borderRadius: "50%",
-                border: "none", cursor: "pointer",
-                background: isListening ? "#EF4444" : "var(--accent)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all .15s",
-                animation: isListening ? "pulse 1.5s infinite" : "none",
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-            </button>
-          </div>
-
-          {isListening && (
-            <p style={{ fontSize: 12, color: "#EF4444", textAlign: "center", marginBottom: 12, fontWeight: 500 }}>
-              Слушаю...
-            </p>
-          )}
 
           <BigBtn onClick={save}>
             Сохранить
