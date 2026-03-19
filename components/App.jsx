@@ -59,6 +59,11 @@ export default function App() {
   const [userName, setUserName] = useLocalState("forma_user", null);
   const { profile, ensureProfile, loadForms, saveForms, onIdsUpdated } = useSupaSync();
   const initialLoadDone = useRef(false);
+  const [dateStr, setDateStr] = useState("");
+
+  useEffect(() => {
+    setDateStr(new Date().toLocaleDateString("ru", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase()));
+  }, []);
 
   useEffect(() => {
     onIdsUpdated.current = (idMap) => {
@@ -117,7 +122,7 @@ export default function App() {
             fontSize: 13, fontWeight: 500, color: "var(--txt)",
             letterSpacing: 0.2,
           }}>
-            {new Date().toLocaleDateString("ru", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
+            {dateStr}
           </span>
           <div style={{
             width: 34, height: 34, borderRadius: 12,
