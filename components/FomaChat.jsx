@@ -5,7 +5,58 @@ import { askClaude } from "@/lib/helpers";
 import { buildFomaContext, fomaSystemPrompt } from "@/lib/ai-context";
 import { Card } from "@/components/ui";
 
-export default function FomaChat({ userId, userName }) {
+// Build local context from app state (localStorage)
+function buildLocalContext(forms) {
+  const parts = [];
+
+  // Forms status
+  if (forms && forms.length > 0) {
+    const formLines = forms.map(f => {
+      let status = f.checkedToday ? "выполнено" : "не выполнено";
+      if (f.type === "time" && f.checkedAt) status = `отмечено в ${f.checkedAt}`;
+      if (f.type === "duration" && f.checkedToday) status = `${f.logged} мин`;
+      if (f.type === "steps" && f.checkedToday) status = `${f.logged} шагов`;
+      return `- ${f.name}: ${status}`;
+    });
+    parts.push(`ФОРМЫ СЕГОДНЯ:\n${formLines.join("\n")}`);
+  }
+
+  // Meals from localStorage
+  try {
+    const mealsRaw = localStorage.getItem("forma_meals_today");
+    const mealsDate = localStorage.getItem("forma_meals_date");
+    const today = new Date().toISOString().slice(0, 10);
+    if (mealsRaw && mealsDate === today) {
+      const meals = JSON.parse(mealsRaw);
+      if (meals.length > 0) {
+        const totalCal = meals.reduce((s, m) => s + (m.calories || 0), 0);
+        const totalP = meals.reduce((s, m) => s + (m.protein || 0), 0);
+        const totalF = meals.reduce((s, m) => s + (m.fat || 0), 0);
+        const totalC = meals.reduce((s, m) => s + (m.carbs || 0), 0);
+        const mealLines = meals.map(m =>
+          `- ${m.time} ${m.dish} — ${m.calories} ккал (Б:${m.protein} Ж:${m.fat} У:${m.carbs})`
+        );
+        parts.push(`ЕДА СЕГОДНЯ (${totalCal} ккал, Б:${totalP} Ж:${totalF} У:${totalC}):\n${mealLines.join("\n")}`);
+      }
+    }
+  } catch {}
+
+  // Diary
+  try {
+    const diaryRaw = localStorage.getItem("forma_diary");
+    if (diaryRaw) {
+      const entries = JSON.parse(diaryRaw).slice(0, 3);
+      if (entries.length > 0) {
+        const lines = entries.map(e => `- ${e.date}: ${e.emotion || "?"} — ${(e.text || "").slice(0, 80)}`);
+        parts.push(`ДНЕВНИК (последние):\n${lines.join("\n")}`);
+      }
+    }
+  } catch {}
+
+  return parts.join("\n\n");
+}
+
+export default function FomaChat({ userId, userName, forms }) {
   const [messages, setMessages] = useLocalState("forma_chat", []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,10 +80,12 @@ export default function FomaChat({ userId, userName }) {
     setLoading(true);
 
     try {
-      const context = await buildFomaContext(userId);
-      const system = fomaSystemPrompt(context);
+      // Combine Supabase context + local app state
+      const supaContext = await buildFomaContext(userId);
+      const localContext = buildLocalContext(forms);
+      const fullContext = [supaContext, localContext].filter(Boolean).join("\n\n");
+      const system = fomaSystemPrompt(fullContext);
 
-      // Build conversation history (last 10 messages)
       const history = [...messages.slice(-10), userMsg].map(m => ({
         role: m.role === "user" ? "user" : "assistant",
         content: m.text,

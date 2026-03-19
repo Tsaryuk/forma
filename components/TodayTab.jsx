@@ -601,7 +601,7 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
 
     {/* Foma Chat */}
     <Card style={{ marginTop: 16 }} pad="16px">
-      <FomaChat userId={userId} userName={userName} />
+      <FomaChat userId={userId} userName={userName} forms={forms} />
     </Card>
   </>;
 }
