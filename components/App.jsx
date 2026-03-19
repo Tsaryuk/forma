@@ -5,8 +5,7 @@ import { calcDailyScore } from "@/lib/helpers";
 import { DEFAULT_FORMS } from "@/lib/data";
 
 import TodayTab       from "@/components/TodayTab";
-import FeedTab        from "@/components/FeedTab";
-import LeaderboardTab from "@/components/LeaderboardTab";
+import DiaryTab       from "@/components/DiaryTab";
 import ChallengeWidget from "@/components/ChallengeWidget";
 import CalendarWidget  from "@/components/CalendarWidget";
 import SettingsTab    from "@/components/SettingsTab";
@@ -21,17 +20,11 @@ function IconToday({ active }) {
     </svg>
   );
 }
-function IconFeed({ active }) {
+function IconDiary({ active }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-function IconStar({ active }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} fillOpacity={active ? 0.1 : 0} stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
     </svg>
   );
 }
@@ -53,8 +46,7 @@ function IconSettings({ active }) {
 
 const TABS = [
   { id: "today",     label: "Сегодня",   Icon: IconToday    },
-  { id: "feed",      label: "Лента",     Icon: IconFeed     },
-  { id: "leaders",   label: "Рейтинг",   Icon: IconStar     },
+  { id: "diary",     label: "Дневник",   Icon: IconDiary    },
   { id: "exp",       label: "Опыты",     Icon: IconExp      },
   { id: "settings",  label: "Формы",     Icon: IconSettings },
 ];
@@ -71,14 +63,12 @@ export default function App() {
   const score = calcDailyScore(forms);
   const [expTab, setExpTab] = useState("challenge");
 
-  // Handle ID mapping when new forms get UUIDs from Supabase
   useEffect(() => {
     onIdsUpdated.current = (idMap) => {
       setForms(fs => fs.map(f => idMap[f.id] ? { ...f, id: idMap[f.id] } : f));
     };
   }, []);
 
-  // Sync: load forms from Supabase on first login
   useEffect(() => {
     if (!userName || initialLoadDone.current) return;
     initialLoadDone.current = true;
@@ -89,14 +79,12 @@ export default function App() {
       const dbForms = await loadForms(p.id);
       if (dbForms && dbForms.length > 0) {
         setForms(dbForms);
-      } else {
-        // First time — push default forms to Supabase
+      } else if (forms.length > 0) {
         saveForms(forms, p.id);
       }
     })();
   }, [userName]);
 
-  // Sync: save forms to Supabase on every change
   useEffect(() => {
     if (profile?.id && initialLoadDone.current) {
       saveForms(forms, profile.id);
@@ -155,12 +143,8 @@ export default function App() {
           <TodayTab forms={forms} setForms={setForms} />
         )}
 
-        {tab === "feed" && (
-          <FeedTab />
-        )}
-
-        {tab === "leaders" && (
-          <LeaderboardTab myScore={score} />
+        {tab === "diary" && (
+          <DiaryTab userName={userName} />
         )}
 
         {tab === "exp" && (
