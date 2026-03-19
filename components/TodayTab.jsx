@@ -5,6 +5,7 @@ import { getCat, getType, calcDailyScore, timeDiffMin, fmtMins, addHours, askCla
 import SessionTimer from "@/components/SessionTimer";
 import Mascot from "@/components/Mascot";
 import FomaChat from "@/components/FomaChat";
+import MealTracker from "@/components/MealTracker";
 
 const SIM_NOW = "08:47";
 
@@ -509,8 +510,9 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
   }
 
   const open = activeId ? forms.find(f => f.id === activeId) : null;
-  const pending = forms.filter(f => f.type === "meal" || !f.checkedToday);
-  const done = forms.filter(f => f.type !== "meal" && f.checkedToday);
+  const nonMealForms = forms.filter(f => f.type !== "meal");
+  const pending = nonMealForms.filter(f => !f.checkedToday);
+  const done = nonMealForms.filter(f => f.checkedToday);
 
   return <>
     {/* Mascot hero */}
@@ -572,11 +574,21 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
       </>
     )}
 
+    {/* Meal Tracker section */}
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      marginTop: 16, marginBottom: 10, padding: "0 2px",
+    }}>
+      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
+        Питание
+      </p>
+    </div>
+    <MealTracker userId={userId} />
+
     {open && (
       <Sheet open title={open.name} onClose={() => setActiveId(null)}>
         {open.type === "time"     && <CheckInTime     form={open} onSave={p => handleSave(open.id, p)} onClose={() => setActiveId(null)} />}
         {open.type === "duration" && <CheckInDuration form={open} onSave={p => handleSave(open.id, p)} onStartSession={() => setSessionForm(open)} />}
-        {open.type === "meal"     && <CheckInMeal     form={open} onSave={p => handleSave(open.id, p)} />}
         {open.type === "boolean"  && <CheckInBoolean  form={open} onSave={p => handleSave(open.id, p)} />}
         {open.type === "steps"    && <CheckInSteps    form={open} onSave={p => handleSave(open.id, p)} />}
         {open.type === "limit"    && <CheckInLimit    form={open} onSave={p => handleSave(open.id, p)} />}

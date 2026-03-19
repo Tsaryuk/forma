@@ -1,8 +1,16 @@
+// Allow large bodies for image uploads
+export const config = {
+  api: { bodyParser: { sizeLimit: "10mb" } },
+};
+
+export const maxDuration = 30;
+
 /**
  * POST /api/ai
  *
  * Proxy между фронтендом и Claude API.
  * API-ключ хранится только здесь — никогда не попадает в браузер.
+ * Поддерживает vision (base64 images в content).
  *
  * Body: стандартный Anthropic messages payload
  * { model, max_tokens, system?, messages, stream? }
