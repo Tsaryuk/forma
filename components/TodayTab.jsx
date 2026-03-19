@@ -4,6 +4,7 @@ import { Card, Pill, Ring, Dots, BigBtn, Sheet, Field, TextInput, TimeInput, Sec
 import { getCat, getType, calcDailyScore, timeDiffMin, fmtMins, addHours, askClaude } from "@/lib/helpers";
 import SessionTimer from "@/components/SessionTimer";
 import Mascot from "@/components/Mascot";
+import FomaChat from "@/components/FomaChat";
 
 const SIM_NOW = "08:47";
 
@@ -493,7 +494,7 @@ function ActivityCard({ form, done, onOpen }) {
 }
 
 // ── TODAY TAB ─────────────────────────────────────────────
-export default function TodayTab({ forms, setForms }) {
+export default function TodayTab({ forms, setForms, userId, userName }) {
   const [activeId, setActiveId] = useState(null);
   const [sessionForm, setSessionForm] = useState(null);
   const score = calcDailyScore(forms);
@@ -593,5 +594,10 @@ export default function TodayTab({ forms, setForms }) {
         onClose={() => setSessionForm(null)}
       />
     )}
+
+    {/* Foma Chat */}
+    <Card style={{ marginTop: 16 }} pad="16px">
+      <FomaChat userId={userId} userName={userName} />
+    </Card>
   </>;
 }

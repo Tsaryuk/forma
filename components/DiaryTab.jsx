@@ -1,7 +1,8 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocalState } from "@/lib/hooks";
 import { askClaude } from "@/lib/helpers";
+import { supabase } from "@/lib/supabase";
 import { Card, Sheet, BigBtn, SectionLabel } from "@/components/ui";
 
 const EMOTIONS = [
@@ -20,7 +21,7 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function DiaryTab({ userName }) {
+export default function DiaryTab({ userName, userId }) {
   const [entries, setEntries] = useLocalState("forma_diary", []);
   const [showNew, setShowNew] = useState(false);
   const [emotion, setEmotion] = useState(null);
@@ -131,7 +132,7 @@ export default function DiaryTab({ userName }) {
     setAnalyzing(false);
   }
 
-  function save() {
+  async function save() {
     if (!emotion && !text.trim()) return;
     const key = todayKey();
     const entry = {
@@ -145,6 +146,19 @@ export default function DiaryTab({ userName }) {
       const without = prev.filter(e => e.date !== key);
       return [entry, ...without];
     });
+
+    // Save to Supabase
+    if (supabase && userId) {
+      await supabase.from("diary").insert({
+        user_id: userId,
+        date: key,
+        text: entry.text,
+        emotion: entry.emotion,
+        ai_reply: entry.aiReply,
+        voice: false,
+      }).catch(console.error);
+    }
+
     setShowNew(false);
     setEmotion(null);
     setText("");

@@ -6,13 +6,12 @@ import { DEFAULT_FORMS } from "@/lib/data";
 
 import TodayTab       from "@/components/TodayTab";
 import DiaryTab       from "@/components/DiaryTab";
-import ChallengeWidget from "@/components/ChallengeWidget";
-import CalendarWidget  from "@/components/CalendarWidget";
+import CalendarTab    from "@/components/CalendarTab";
 import SettingsTab    from "@/components/SettingsTab";
 import Onboarding    from "@/components/Onboarding";
 
 // ── Nav icons ─────────────────────────────────────────────
-function IconToday({ active }) {
+function IconDashboard({ active }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round">
       <circle cx="12" cy="12" r="9" />
@@ -28,10 +27,11 @@ function IconDiary({ active }) {
     </svg>
   );
 }
-function IconExp({ active }) {
+function IconCalendar({ active }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );
 }
@@ -45,10 +45,10 @@ function IconSettings({ active }) {
 }
 
 const TABS = [
-  { id: "today",     label: "Сегодня",   Icon: IconToday    },
-  { id: "diary",     label: "Дневник",   Icon: IconDiary    },
-  { id: "exp",       label: "Опыты",     Icon: IconExp      },
-  { id: "settings",  label: "Формы",     Icon: IconSettings },
+  { id: "today",    label: "Главная",    Icon: IconDashboard },
+  { id: "diary",    label: "Дневник",    Icon: IconDiary },
+  { id: "calendar", label: "Календарь",  Icon: IconCalendar },
+  { id: "settings", label: "Настройки",  Icon: IconSettings },
 ];
 
 // ── App ───────────────────────────────────────────────────
@@ -59,9 +59,6 @@ export default function App() {
   const [userName, setUserName] = useLocalState("forma_user", null);
   const { profile, ensureProfile, loadForms, saveForms, onIdsUpdated } = useSupaSync();
   const initialLoadDone = useRef(false);
-
-  const score = calcDailyScore(forms);
-  const [expTab, setExpTab] = useState("challenge");
 
   useEffect(() => {
     onIdsUpdated.current = (idMap) => {
@@ -114,7 +111,7 @@ export default function App() {
             fontSize: 13, fontWeight: 600, color: "var(--accent)",
             boxShadow: "var(--shadow-sm)",
           }}>
-            {userName?.[0]?.toUpperCase() || "Ф"}
+            {userName?.[0]?.toUpperCase() || "Д"}
           </div>
           <span style={{
             fontSize: 13, fontWeight: 500, color: "var(--txt)",
@@ -129,8 +126,8 @@ export default function App() {
             boxShadow: "var(--shadow-sm)",
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txt2)" strokeWidth="1.5" strokeLinecap="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
           </div>
         </div>
@@ -140,47 +137,15 @@ export default function App() {
       <div style={{ padding: "10px 16px 100px" }}>
 
         {tab === "today" && (
-          <TodayTab forms={forms} setForms={setForms} />
+          <TodayTab forms={forms} setForms={setForms} userId={profile?.id} userName={userName} />
         )}
 
         {tab === "diary" && (
-          <DiaryTab userName={userName} />
+          <DiaryTab userName={userName} userId={profile?.id} />
         )}
 
-        {tab === "exp" && (
-          <>
-            <div style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginBottom: 14, padding: "0 2px",
-            }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
-                Опыты
-              </p>
-              <div style={{ display: "flex", gap: 4, background: "var(--surface2)", borderRadius: "var(--radius-sm)", padding: 3 }}>
-                {[["challenge", "Эксперименты"], ["calendar", "Календарь"]].map(([id, label]) => (
-                  <button
-                    key={id}
-                    onClick={() => setExpTab(id)}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 9,
-                      fontSize: 12, fontWeight: expTab === id ? 600 : 400,
-                      cursor: "pointer",
-                      transition: "all .15s",
-                      border: "none",
-                      background: expTab === id ? "var(--surface)" : "transparent",
-                      color: expTab === id ? "var(--txt)" : "var(--txt3)",
-                      boxShadow: expTab === id ? "var(--shadow-sm)" : "none",
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {expTab === "challenge" && <ChallengeWidget />}
-            {expTab === "calendar"  && <CalendarWidget />}
-          </>
+        {tab === "calendar" && (
+          <CalendarTab userId={profile?.id} userName={userName} forms={forms} />
         )}
 
         {tab === "settings" && (
