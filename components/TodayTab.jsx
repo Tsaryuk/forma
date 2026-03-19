@@ -46,27 +46,55 @@ function CheckInDuration({ form, onSave, onStartSession }) {
 
   function startVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) { alert("Браузер не поддерживает распознавание речи"); return; }
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch(e) {} }
     const recognition = new SR();
     recognition.lang = "ru-RU";
-    recognition.interimResults = false;
-    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+    let finalText = "";
     recognition.onresult = (e) => {
-      let transcript = "";
+      let interim = "";
       for (let i = 0; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript + " ";
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          finalText += t + " ";
+        } else {
+          interim = t;
+        }
       }
-      setNote(prev => prev ? prev + " " + transcript.trim() : transcript.trim());
+      const combined = (finalText + interim).trim();
+      if (combined) {
+        setNote(prev => {
+          const base = recognitionRef.current?._baseNote ?? prev;
+          return base ? base + " " + combined : combined;
+        });
+      }
     };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (e) => {
+      console.log("Speech error:", e.error);
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      if (finalText.trim()) {
+        setNote(prev => {
+          const base = recognitionRef.current?._baseNote ?? "";
+          return base ? base + " " + finalText.trim() : finalText.trim();
+        });
+      }
+      setIsListening(false);
+    };
+    recognition._baseNote = note;
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
   }
 
   function stopVoice() {
-    if (recognitionRef.current) recognitionRef.current.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
     setIsListening(false);
   }
 
