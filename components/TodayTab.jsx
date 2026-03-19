@@ -574,15 +574,7 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
       </>
     )}
 
-    {/* Meal Tracker section */}
-    <div style={{
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      marginTop: 16, marginBottom: 10, padding: "0 2px",
-    }}>
-      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
-        Питание
-      </p>
-    </div>
+    {/* Meal Tracker — as a card like other activities */}
     <MealTracker userId={userId} />
 
     {open && (
