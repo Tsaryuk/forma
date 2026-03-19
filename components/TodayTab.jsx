@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, Pill, Ring, Dots, BigBtn, Sheet, Field, TextInput, TimeInput, SectionLabel } from "@/components/ui";
-import { getCat, getType, calcDailyScore, timeDiffMin, fmtMins, addHours } from "@/lib/helpers";
+import { getCat, getType, calcDailyScore, timeDiffMin, fmtMins, addHours, askClaude } from "@/lib/helpers";
 import SessionTimer from "@/components/SessionTimer";
 import Mascot from "@/components/Mascot";
 
@@ -35,10 +35,65 @@ function CheckInTime({ form, onSave, onClose }) {
 function CheckInDuration({ form, onSave, onStartSession }) {
   const [mins, setMins] = useState(form.logged || 0);
   const [note, setNote] = useState(form.note || "");
+  const [isListening, setIsListening] = useState(false);
+  const [tgPost, setTgPost] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const recognitionRef = useRef(null);
   const target = form.target || 60;
   const pct = Math.min(100, Math.round(mins / target * 100));
   const pts = mins >= target ? form.pts : note ? Math.round(form.pts * pct / 100) : Math.round(form.pts * .5 * pct / 100);
   const presets = [15, 30, 45, 60, 90, 120];
+
+  function startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const recognition = new SR();
+    recognition.lang = "ru-RU";
+    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.onresult = (e) => {
+      let transcript = "";
+      for (let i = 0; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript + " ";
+      }
+      setNote(prev => prev ? prev + " " + transcript.trim() : transcript.trim());
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }
+
+  function stopVoice() {
+    if (recognitionRef.current) recognitionRef.current.stop();
+    setIsListening(false);
+  }
+
+  async function generatePost() {
+    if (!note.trim()) return;
+    setGenerating(true);
+    try {
+      const text = await askClaude({
+        system: `Ты помощник Дениса, который ведёт телеграм-канал о саморазвитии, привычках и осознанности.
+Денис делится мыслями после утреннего чтения.
+Твоя задача — из его заметки/наговоренных мыслей сделать пост для ТГ-канала.
+Формат: короткий (3-5 абзацев), живой, от первого лица, с практическим выводом.
+Без хештегов, без "доброе утро", без формального тона. Как будто пишет другу, но публично.
+Используй emoji умеренно (1-2 на пост). Пиши на русском.`,
+        prompt: `Вот моя заметка после чтения:\n\n"${note}"\n\nСделай из этого пост для телеграм-канала.`,
+        max_tokens: 1024,
+      });
+      setTgPost(text);
+    } catch (err) {
+      setTgPost("Ошибка: " + err.message);
+    }
+    setGenerating(false);
+  }
+
+  function copyPost() {
+    navigator.clipboard?.writeText(tgPost);
+  }
 
   return <>
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginBottom: 20 }}>
@@ -86,12 +141,104 @@ function CheckInDuration({ form, onSave, onStartSession }) {
         ))}
       </div>
     </Field>
-    <Field label="Главная мысль" hint="Без заметки — 50% очков">
-      <TextInput value={note} onChange={e => setNote(e.target.value)} placeholder="Что зацепило сегодня?" multiline rows={3} />
+
+    <Field label="Главная мысль" hint="Наговори или напиши — AI сделает пост для ТГ">
+      <div style={{ position: "relative" }}>
+        <TextInput value={note} onChange={e => setNote(e.target.value)} placeholder="Что зацепило сегодня?" multiline rows={4} />
+        <button
+          onClick={isListening ? stopVoice : startVoice}
+          style={{
+            position: "absolute", right: 8, bottom: 8,
+            width: 36, height: 36, borderRadius: "50%",
+            border: "none", cursor: "pointer",
+            background: isListening ? "#EF4444" : "var(--accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: isListening ? "pulse 1.5s infinite" : "none",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        </button>
+      </div>
     </Field>
+
+    {isListening && (
+      <p style={{ fontSize: 12, color: "#EF4444", textAlign: "center", marginBottom: 8, fontWeight: 500 }}>
+        Слушаю...
+      </p>
+    )}
+
+    {note.trim() && !tgPost && (
+      <button
+        onClick={generatePost}
+        disabled={generating}
+        style={{
+          width: "100%", padding: "12px", marginBottom: 14,
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border2)",
+          background: "var(--surface2)",
+          color: "var(--txt)",
+          fontSize: 13, fontWeight: 500, cursor: generating ? "wait" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          opacity: generating ? 0.6 : 1,
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+        {generating ? "Генерирую..." : "Сгенерировать пост для ТГ"}
+      </button>
+    )}
+
+    {tgPost && (
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          marginBottom: 6,
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--txt2)" }}>Пост для Telegram</span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={generatePost} disabled={generating} style={{
+              padding: "4px 10px", borderRadius: 8, border: "1px solid var(--border2)",
+              background: "var(--surface2)", color: "var(--txt3)", fontSize: 11,
+              cursor: "pointer",
+            }}>
+              {generating ? "..." : "Ещё"}
+            </button>
+            <button onClick={copyPost} style={{
+              padding: "4px 10px", borderRadius: 8, border: "1px solid var(--accent)",
+              background: "var(--accent-bg)", color: "var(--accent)", fontSize: 11,
+              cursor: "pointer", fontWeight: 600,
+            }}>
+              Копировать
+            </button>
+          </div>
+        </div>
+        <div style={{
+          padding: "12px 14px", borderRadius: "var(--radius-sm)",
+          background: "var(--surface2)", border: "1px solid var(--border)",
+          fontSize: 13, color: "var(--txt)", lineHeight: 1.6,
+          whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto",
+        }}>
+          {tgPost}
+        </div>
+      </div>
+    )}
+
     <BigBtn onClick={() => onSave({ logged: mins, note, checkedToday: true })} color={pct >= 100 ? "var(--green)" : "var(--txt)"} disabled={mins === 0}>
       Сохранить · {pts}
     </BigBtn>
+
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+        50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+      }
+    `}</style>
   </>;
 }
 
