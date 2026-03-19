@@ -158,6 +158,45 @@ function CheckInBoolean({ form, onSave }) {
   </>;
 }
 
+// ── Check-in: Steps ──────────────────────────────────────
+function CheckInSteps({ form, onSave }) {
+  const [steps, setSteps] = useState(form.logged || 0);
+  const target = form.target || 20000;
+  const pct = Math.min(100, Math.round(steps / target * 100));
+  const pts = steps >= target ? form.pts : Math.round(form.pts * pct / 100);
+  const ok = steps >= target;
+  const presets = [5000, 10000, 15000, 20000, 25000];
+
+  return <>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginBottom: 20 }}>
+      <div style={{ position: "relative", display: "inline-flex" }}>
+        <Ring pct={pct} size={76} stroke={4} color={ok ? "var(--green)" : "var(--accent)"} />
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontFamily: "var(--font-serif)", fontSize: 18, fontWeight: 400, fontStyle: "italic", color: "var(--txt)" }}>{(steps/1000).toFixed(1)}k</span>
+          <span style={{ fontSize: 9, color: "var(--txt3)", letterSpacing: 0.5 }}>шагов</span>
+        </div>
+      </div>
+      <div>
+        <p style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 400, fontStyle: "italic", color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
+        <p style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>из {form.pts}</p>
+      </div>
+    </div>
+
+    <Field label="Сколько шагов?">
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {presets.map(v => (
+          <button key={v} onClick={() => setSteps(v)} style={{ flex: "1 1 auto", minWidth: 50, padding: "9px 4px", borderRadius: "var(--radius-sm)", border: `1px solid ${steps === v ? "var(--accent)" : "var(--border2)"}`, background: steps === v ? "var(--accent-bg)" : "var(--surface2)", color: steps === v ? "var(--accent)" : "var(--txt2)", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all .12s" }}>{(v/1000)}k</button>
+        ))}
+      </div>
+      <input type="number" value={steps} onChange={e => setSteps(Number(e.target.value))} placeholder="Или введи число" style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 16, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" }} />
+    </Field>
+
+    <BigBtn onClick={() => onSave({ logged: steps, checkedToday: true })} color={ok ? "var(--green)" : "var(--accent)"} disabled={steps === 0}>
+      {ok ? `Цель достигнута — ${pts}` : `Сохранить — ${pts}`}
+    </BigBtn>
+  </>;
+}
+
 // ── Check-in: Limit ───────────────────────────────────────
 function CheckInLimit({ form, onSave }) {
   const [spent, setSpent] = useState(form.spent || 0);
@@ -201,6 +240,10 @@ function ActivityCard({ form, done, onOpen }) {
   if (form.type === "duration" && form.checkedToday) {
     statusText = `${form.logged} мин`;
     statusColor = "var(--blue)";
+  }
+  if (form.type === "steps" && form.checkedToday) {
+    statusText = `${(form.logged/1000).toFixed(1)}k`;
+    statusColor = form.logged >= (form.target || 20000) ? "var(--green)" : "var(--accent)";
   }
   if (form.type === "meal") {
     const cnt = form.meals?.filter(m => m.done).length || 0;
@@ -359,6 +402,7 @@ export default function TodayTab({ forms, setForms }) {
         {open.type === "duration" && <CheckInDuration form={open} onSave={p => handleSave(open.id, p)} onStartSession={() => setSessionForm(open)} />}
         {open.type === "meal"     && <CheckInMeal     form={open} onSave={p => handleSave(open.id, p)} />}
         {open.type === "boolean"  && <CheckInBoolean  form={open} onSave={p => handleSave(open.id, p)} />}
+        {open.type === "steps"    && <CheckInSteps    form={open} onSave={p => handleSave(open.id, p)} />}
         {open.type === "limit"    && <CheckInLimit    form={open} onSave={p => handleSave(open.id, p)} />}
       </Sheet>
     )}
