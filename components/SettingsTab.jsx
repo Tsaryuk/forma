@@ -101,7 +101,7 @@ function FormEditorSheet({ open, onClose, initial, onSave }) {
 
       {draft.type === "limit" && (
         <Field label="Дневной лимит, ₽">
-          <input type="number" value={draft.limitPerDay} onChange={e => set("limitPerDay", Number(e.target.value))} style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 18, fontWeight: 600, fontFamily: "var(--font-serif)", outline: "none", width: "100%" }} />
+          <input type="number" value={draft.limitPerDay} onChange={e => set("limitPerDay", Number(e.target.value))} style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 18, fontWeight: 600, outline: "none", width: "100%" }} />
         </Field>
       )}
 

@@ -143,10 +143,10 @@ export default function Mascot({ pct = 0, forms = [], hasBroken = false }) {
           {/* Zzz for sleepy */}
           {isSleepy && (
             <g style={{ animation: "fomaZzz 3s ease-in-out infinite" }}>
-              <text x="72" y="30" fontSize="10" fill="#9C9889" fontFamily="var(--font-serif)" fontStyle="italic" opacity="0.6">z</text>
-              <text x="78" y="22" fontSize="8" fill="#9C9889" fontFamily="var(--font-serif)" fontStyle="italic" opacity="0.4"
+              <text x="72" y="30" fontSize="10" fill="#9C9889" fontFamily="var(--font)" opacity="0.6">z</text>
+              <text x="78" y="22" fontSize="8" fill="#9C9889" fontFamily="var(--font)" opacity="0.4"
                 style={{ animation: "fomaZzz 3s ease-in-out 0.5s infinite" }}>z</text>
-              <text x="83" y="15" fontSize="6" fill="#9C9889" fontFamily="var(--font-serif)" fontStyle="italic" opacity="0.25"
+              <text x="83" y="15" fontSize="6" fill="#9C9889" fontFamily="var(--font)" opacity="0.25"
                 style={{ animation: "fomaZzz 3s ease-in-out 1s infinite" }}>z</text>
             </g>
           )}
@@ -213,8 +213,8 @@ export default function Mascot({ pct = 0, forms = [], hasBroken = false }) {
 
       {/* Name */}
       <p style={{
-        fontFamily: "var(--font-serif)", fontSize: 20,
-        fontStyle: "italic", fontWeight: 400,
+        fontSize: 20,
+        fontWeight: 400,
         color: "var(--txt)", marginBottom: 4,
       }}>
         Фома

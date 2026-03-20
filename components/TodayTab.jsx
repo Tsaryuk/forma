@@ -130,12 +130,12 @@ function CheckInDuration({ form, onSave, onStartSession }) {
       <div style={{ position: "relative", display: "inline-flex" }}>
         <Ring pct={pct} size={76} stroke={4} color={pct >= 100 ? "var(--green)" : "var(--accent)"} />
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 400, fontStyle: "italic", color: "var(--txt)" }}>{mins}</span>
+          <span style={{ fontSize: 22, fontWeight: 400, color: "var(--txt)" }}>{mins}</span>
           <span style={{ fontSize: 9, color: "var(--txt3)", letterSpacing: 0.5 }}>мин</span>
         </div>
       </div>
       <div>
-        <p style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 400, fontStyle: "italic", color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
+        <p style={{ fontSize: 28, fontWeight: 400, color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
         <p style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>из {form.pts}</p>
       </div>
     </div>
@@ -314,7 +314,7 @@ function CheckInBoolean({ form, onSave }) {
   const [note, setNote] = useState("");
   if (!broken) return <>
     <div style={{ padding: "24px 0", textAlign: "center" }}>
-      <p style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontStyle: "italic", color: "var(--txt)", marginBottom: 6 }}>{form.name}</p>
+      <p style={{ fontSize: 22, color: "var(--txt)", marginBottom: 6 }}>{form.name}</p>
       <p style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.6, maxWidth: 280, margin: "0 auto 28px" }}>{form.principle}</p>
     </div>
     <div style={{ display: "flex", gap: 10 }}>
@@ -349,12 +349,12 @@ function CheckInSteps({ form, onSave }) {
       <div style={{ position: "relative", display: "inline-flex" }}>
         <Ring pct={pct} size={76} stroke={4} color={ok ? "var(--green)" : "var(--accent)"} />
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: 18, fontWeight: 400, fontStyle: "italic", color: "var(--txt)" }}>{(steps/1000).toFixed(1)}k</span>
+          <span style={{ fontSize: 18, fontWeight: 400, color: "var(--txt)" }}>{(steps/1000).toFixed(1)}k</span>
           <span style={{ fontSize: 9, color: "var(--txt3)", letterSpacing: 0.5 }}>шагов</span>
         </div>
       </div>
       <div>
-        <p style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 400, fontStyle: "italic", color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
+        <p style={{ fontSize: 28, fontWeight: 400, color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
         <p style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>из {form.pts}</p>
       </div>
     </div>
@@ -384,14 +384,14 @@ function CheckInLimit({ form, onSave }) {
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: "var(--txt2)" }}>Потрачено</span>
-        <span style={{ fontFamily: "var(--font-serif)", fontSize: 15, fontStyle: "italic", color: ok ? "var(--green)" : "var(--red)", fontWeight: 400 }}>{spent.toLocaleString()} / {limit.toLocaleString()} ₽</span>
+        <span style={{ fontSize: 15, color: ok ? "var(--green)" : "var(--red)", fontWeight: 400 }}>{spent.toLocaleString()} / {limit.toLocaleString()} ₽</span>
       </div>
       <div style={{ height: 6, borderRadius: 3, background: "var(--surface3)", overflow: "hidden" }}>
         <div style={{ height: "100%", borderRadius: 3, background: ok ? "var(--green)" : "var(--red)", width: `${pct}%`, transition: "width .4s ease" }} />
       </div>
     </div>
     <Field label="Сколько потратил сегодня, ₽">
-      <input type="number" value={spent} onChange={e => setSpent(Number(e.target.value))} style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 20, fontWeight: 600, fontFamily: "var(--font-serif)", outline: "none", width: "100%" }} />
+      <input type="number" value={spent} onChange={e => setSpent(Number(e.target.value))} style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 20, fontWeight: 600, outline: "none", width: "100%" }} />
     </Field>
     <BigBtn onClick={() => onSave({ spent, checkedToday: true })} color={ok ? "var(--green)" : "var(--red)"}>
       {ok ? `В рамках — ${form.pts}` : "Превышение — 0"}
@@ -602,17 +602,17 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
         gap: 0,
       }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontFamily: "var(--font-serif)", fontSize: 24, fontWeight: 300, fontStyle: "italic", color: "var(--txt)", lineHeight: 1 }}>{score}</p>
+          <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", lineHeight: 1 }}>{score}</p>
           <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>очков</p>
         </div>
         <div style={{ width: 1, background: "var(--border)" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontFamily: "var(--font-serif)", fontSize: 24, fontWeight: 300, fontStyle: "italic", color: "var(--txt)", lineHeight: 1 }}>{doneCount}/{forms.length}</p>
+          <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", lineHeight: 1 }}>{doneCount}/{forms.length}</p>
           <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>форм</p>
         </div>
         <div style={{ width: 1, background: "var(--border)" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontFamily: "var(--font-serif)", fontSize: 24, fontWeight: 300, fontStyle: "italic", color: "var(--txt)", lineHeight: 1 }}>{forms.reduce((a, f) => Math.max(a, f.streak), 0)}</p>
+          <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", lineHeight: 1 }}>{forms.reduce((a, f) => Math.max(a, f.streak), 0)}</p>
           <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>макс. стрик</p>
         </div>
       </div>

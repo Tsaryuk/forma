@@ -121,7 +121,7 @@ export default function CalendarWidget() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button onClick={prevMonth} style={{ width: 30, height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--border2)", background: "transparent", color: "var(--txt2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{"‹"}</button>
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontStyle: "italic", color: "var(--txt)" }}>{MONTH_NAMES[month]} {year}</span>
+          <span style={{ fontSize: 17, color: "var(--txt)" }}>{MONTH_NAMES[month]} {year}</span>
           <button onClick={nextMonth} style={{ width: 30, height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--border2)", background: "transparent", color: "var(--txt2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, opacity: (month === TODAY.getMonth() && year === TODAY.getFullYear()) ? .3 : 1 }}>{"›"}</button>
         </div>
 
@@ -165,7 +165,7 @@ export default function CalendarWidget() {
       {/* Selected day */}
       {selected && selData && (
         <Card style={{ marginTop: 8, animation: "fadeUp .2s ease" }} pad="15px 18px">
-          <p style={{ fontFamily: "var(--font-serif)", fontSize: 16, fontStyle: "italic", color: "var(--txt)", marginBottom: 10 }}>
+          <p style={{ fontSize: 16, color: "var(--txt)", marginBottom: 10 }}>
             {selected} {MONTH_NAMES[month].toLowerCase()} · {selData.score}
           </p>
           {selData.done.length > 0 && (
@@ -188,7 +188,7 @@ export default function CalendarWidget() {
             <Pill color="var(--blue)" bg="var(--blue-bg)" small>{selData.challenge.name} {selData.challenge.success ? "✓" : "✗"}</Pill>
           )}
           {selData.note && (
-            <p style={{ fontSize: 12, color: "var(--txt2)", fontStyle: "italic", marginTop: 10, lineHeight: 1.6, borderTop: "1px solid var(--border)", paddingTop: 10 }}>«{selData.note}»</p>
+            <p style={{ fontSize: 12, color: "var(--txt2)", marginTop: 10, lineHeight: 1.6, borderTop: "1px solid var(--border)", paddingTop: 10 }}>«{selData.note}»</p>
           )}
         </Card>
       )}

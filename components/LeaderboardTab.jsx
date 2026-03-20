@@ -30,20 +30,20 @@ export default function LeaderboardTab({ myScore = 0 }) {
       {/* My rank callout */}
       <Card style={{ background: "var(--gold-bg)", border: "1px solid var(--gold)", marginBottom: 14 }} pad="14px 16px">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: 26, fontStyle: "italic", fontWeight: 300, color: "var(--gold)" }}>{myRank}</span>
+          <span style={{ fontSize: 26, fontWeight: 300, color: "var(--gold)" }}>{myRank}</span>
           <div>
             <p style={{ fontWeight: 600, fontSize: 14, color: "var(--gold)", margin: 0 }}>Ты на {myRank}-м месте</p>
             {above && <p style={{ fontSize: 12, color: "var(--txt2)", margin: 0 }}>До {above.name} — {(above.pts - (myEntry?.pts ?? 0)).toLocaleString()}</p>}
           </div>
           <div style={{ marginLeft: "auto", textAlign: "right" }}>
-            <p style={{ fontFamily: "var(--font-serif)", fontSize: 24, fontWeight: 300, fontStyle: "italic", color: "var(--txt)", margin: 0 }}>{myEntry?.pts.toLocaleString()}</p>
+            <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", margin: 0 }}>{myEntry?.pts.toLocaleString()}</p>
           </div>
         </div>
       </Card>
 
       {board.map((f, i) => (
         <div key={f.id} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", borderRadius: "var(--radius)", background: "var(--surface)", border: f.me ? "1.5px solid var(--gold)" : "1px solid var(--border)", marginBottom: 8, transition: "all .2s" }}>
-          <div style={{ width: 28, textAlign: "center", fontFamily: "var(--font-serif)", fontSize: i < 3 ? 18 : 14, fontStyle: "italic", fontWeight: 300, color: i < 3 ? "var(--gold)" : "var(--txt3)", flexShrink: 0 }}>
+          <div style={{ width: 28, textAlign: "center", fontSize: i < 3 ? 18 : 14, fontWeight: 300, color: i < 3 ? "var(--gold)" : "var(--txt3)", flexShrink: 0 }}>
             {i < 3 ? MEDALS[i] : i + 1}
           </div>
           <Ava init={f.init} col={f.col} size={36} />
@@ -60,7 +60,7 @@ export default function LeaderboardTab({ myScore = 0 }) {
             <p style={{ fontSize: 11, color: "var(--txt3)", margin: 0 }}>{f.streak}д · {f.forms} форм</p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <p style={{ fontFamily: "var(--font-serif)", fontSize: 19, fontWeight: 300, fontStyle: "italic", color: "var(--txt)", margin: 0 }}>{f.pts.toLocaleString()}</p>
+            <p style={{ fontSize: 19, fontWeight: 300, color: "var(--txt)", margin: 0 }}>{f.pts.toLocaleString()}</p>
           </div>
         </div>
       ))}

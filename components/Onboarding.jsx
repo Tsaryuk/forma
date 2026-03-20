@@ -131,8 +131,8 @@ export default function Onboarding({ onComplete }) {
 
       {/* Title */}
       <h1 style={{
-        fontFamily: "var(--font-serif)", fontSize: 28,
-        fontWeight: 400, fontStyle: "italic",
+        fontSize: 28,
+        fontWeight: 400,
         color: "var(--txt)", textAlign: "center",
         marginBottom: 8, lineHeight: 1.2,
       }}>

@@ -101,8 +101,8 @@ export default function SessionTimer({ form, targetMins, onFinish, onClose }) {
       <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
         {/* Form name */}
         <p style={{
-          fontFamily: "var(--font-serif)", fontSize: 18,
-          fontStyle: "italic", fontWeight: 300,
+          fontSize: 18,
+          fontWeight: 300,
           color: "rgba(255,255,255,.35)",
           marginBottom: 32, letterSpacing: 0.5,
         }}>
@@ -123,8 +123,8 @@ export default function SessionTimer({ form, targetMins, onFinish, onClose }) {
             alignItems: "center", justifyContent: "center",
           }}>
             <span style={{
-              fontFamily: "var(--font-serif)",
-              fontSize: 56, fontWeight: 300, fontStyle: "italic",
+             
+              fontSize: 56, fontWeight: 300,
               color: "#fff", lineHeight: 1,
               letterSpacing: -2,
             }}>

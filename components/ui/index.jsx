@@ -121,7 +121,7 @@ export function Sheet({ open, onClose, title, children, maxH = "92vh" }) {
           <div style={{ width: 32, height: 4, borderRadius: 99, background: "var(--surface3)" }} />
         </div>
         <div style={{ padding: "10px 20px 0", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <h2 style={{ flex: 1, fontFamily: "var(--font-serif)", fontSize: 19, fontWeight: 400, color: "var(--txt)", fontStyle: "italic" }}>
+          <h2 style={{ flex: 1, fontSize: 19, fontWeight: 400, color: "var(--txt)" }}>
             {title}
           </h2>
           <button
@@ -287,7 +287,7 @@ export function TimeInput({ value, onChange }) {
   return (
     <input
       type="time" value={value} onChange={onChange}
-      style={{ ...inputBase, fontSize: 20, fontWeight: 600, textAlign: "center", fontFamily: "var(--font-serif)" }}
+      style={{ ...inputBase, fontSize: 20, fontWeight: 600, textAlign: "center" }}
       onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
       onBlur={e => { e.currentTarget.style.borderColor = ""; }}
     />

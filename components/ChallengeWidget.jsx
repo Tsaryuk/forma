@@ -76,7 +76,7 @@ function ConfirmSheet({ open, onClose, ch, todayIdx, onConfirm }) {
     <Sheet open={open} onClose={onClose} title={`День ${todayIdx + 1}`}>
       <div style={{ textAlign: "center", padding: "24px 0 28px" }}>
         <div style={{ fontSize: 48, marginBottom: 14 }}>{ch.icon}</div>
-        <p style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontStyle: "italic", color: "var(--txt)", marginBottom: 6 }}>
+        <p style={{ fontSize: 22, color: "var(--txt)", marginBottom: 6 }}>
           Ты прожил день {ch.name?.toLowerCase()}?
         </p>
         <p style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.6 }}>{ch.desc}</p>

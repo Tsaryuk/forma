@@ -35,7 +35,7 @@ function FeedItem({ item, onReact }) {
           {item.value && (
             <p style={{ fontSize: 13, color: "var(--txt2)", margin: "3px 0" }}>
               {item.formType === "time" && (
-                <span style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", color: item.exact ? "var(--green)" : "var(--gold)", fontWeight: 400 }}>{item.value}</span>
+                <span style={{ color: item.exact ? "var(--green)" : "var(--gold)", fontWeight: 400 }}>{item.value}</span>
               )}
               {item.formType === "duration" && (
                 <span style={{ fontWeight: 500, color: "var(--txt)" }}>{item.value}</span>
@@ -48,7 +48,7 @@ function FeedItem({ item, onReact }) {
           )}
 
           {item.note && (
-            <div style={{ marginTop: 8, padding: "9px 12px", borderRadius: "var(--radius-sm)", background: item.broken ? "var(--red-bg)" : "var(--surface2)", borderLeft: `2px solid ${item.broken ? "var(--red)" : "var(--border2)"}`, fontSize: 13, color: item.broken ? "var(--red)" : "var(--txt2)", fontStyle: "italic", lineHeight: 1.55 }}>
+            <div style={{ marginTop: 8, padding: "9px 12px", borderRadius: "var(--radius-sm)", background: item.broken ? "var(--red-bg)" : "var(--surface2)", borderLeft: `2px solid ${item.broken ? "var(--red)" : "var(--border2)"}`, fontSize: 13, color: item.broken ? "var(--red)" : "var(--txt2)", lineHeight: 1.55 }}>
               «{item.note}»
             </div>
           )}

@@ -91,7 +91,7 @@ function MealRow({ meal, onEdit, onDelete }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontWeight: 500, fontSize: 13, color: "var(--txt)" }}>{meal.dish}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)", fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
             {meal.calories}
           </span>
         </div>
@@ -116,13 +116,14 @@ function MealRow({ meal, onEdit, onDelete }) {
 }
 
 // ── Timer inside the card ────────────────────────────────
-function TimerLine({ lastMealTime }) {
+function TimerLine({ lastMainMealTime, mainMealCount }) {
   const [remaining, setRemaining] = useState("");
 
   useEffect(() => {
-    if (!lastMealTime) return;
+    // No timer if 3+ main meals done or no main meal yet
+    if (!lastMainMealTime || mainMealCount >= 3) return;
     function update() {
-      const next = new Date(new Date(lastMealTime).getTime() + 4 * 3600000);
+      const next = new Date(new Date(lastMainMealTime).getTime() + 4 * 3600000);
       const diff = next.getTime() - Date.now();
       if (diff <= 0) { setRemaining("Пора есть!"); return; }
       const h = Math.floor(diff / 3600000);
@@ -132,9 +133,24 @@ function TimerLine({ lastMealTime }) {
     update();
     const i = setInterval(update, 60000);
     return () => clearInterval(i);
-  }, [lastMealTime]);
+  }, [lastMainMealTime, mainMealCount]);
 
-  if (!lastMealTime || !remaining) return null;
+  // Don't show timer after 3 main meals
+  if (mainMealCount >= 3) {
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "6px 10px", borderRadius: 8,
+        background: "var(--green-bg)",
+        fontSize: 12, fontWeight: 500,
+        color: "var(--green)", marginTop: 8,
+      }}>
+        ✓ Все основные приемы пищи выполнены
+      </div>
+    );
+  }
+
+  if (!lastMainMealTime || !remaining) return null;
   const isTime = remaining === "Пора есть!";
 
   return (
@@ -179,7 +195,9 @@ export default function MealTracker({ userId }) {
   const totalF = meals.reduce((s, m) => s + (m.fat || 0), 0);
   const totalC = meals.reduce((s, m) => s + (m.carbs || 0), 0);
   const calPct = Math.min(100, Math.round(totalCal / 2200 * 100));
-  const lastMealTime = meals.length > 0 ? meals[meals.length - 1].timestamp : null;
+  const mainMeals = meals.filter(m => m.meal_type !== "snack");
+  const mainMealCount = mainMeals.length;
+  const lastMainMealTime = mainMeals.length > 0 ? mainMeals[mainMeals.length - 1].timestamp : null;
 
   function addPhoto(base64) {
     setPhotos(prev => [...prev, base64]);
@@ -323,7 +341,7 @@ export default function MealTracker({ userId }) {
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontWeight: 600, fontSize: 14, color: "var(--txt)" }}>Питание</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)", fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
                 {totalCal > 0 ? `${totalCal} ккал` : ""}
               </span>
             </div>
@@ -362,7 +380,7 @@ export default function MealTracker({ userId }) {
         )}
 
         {/* Timer */}
-        <TimerLine lastMealTime={lastMealTime} />
+        <TimerLine lastMainMealTime={lastMainMealTime} mainMealCount={mainMealCount} />
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -438,7 +456,7 @@ export default function MealTracker({ userId }) {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontWeight: 600, fontSize: 14, color: "var(--txt)" }}>{result.dish}</span>
-                    <span style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)", fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)" }}>
                       {result.calories} <span style={{ fontSize: 11, fontWeight: 400 }}>ккал</span>
                     </span>
                   </div>
