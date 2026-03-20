@@ -21,9 +21,11 @@ function MacroChip({ label, value, color }) {
   );
 }
 
-// ── Photo button (inline) ────────────────────────────────
+// ── Photo buttons (camera + gallery) ─────────────────────
 function PhotoBtn({ onCapture, small }) {
-  const ref = useRef(null);
+  const cameraRef = useRef(null);
+  const galleryRef = useRef(null);
+
   function handle(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -44,22 +46,34 @@ function PhotoBtn({ onCapture, small }) {
     reader.readAsDataURL(file);
     e.target.value = "";
   }
+
+  const btnStyle = {
+    padding: small ? "8px 12px" : "12px 14px", borderRadius: "var(--radius-sm)",
+    border: "1px dashed var(--border2)", background: "var(--surface2)",
+    cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+    color: "var(--txt3)", fontSize: small ? 12 : 13, fontWeight: 500,
+  };
+
   return (
-    <>
-      <input ref={ref} type="file" accept="image/*" capture="environment" onChange={handle} style={{ display: "none" }} />
-      <button onClick={() => ref.current?.click()} style={{
-        padding: small ? "8px 12px" : "14px 18px", borderRadius: "var(--radius-sm)",
-        border: "1px dashed var(--border2)", background: "var(--surface2)",
-        cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-        color: "var(--txt3)", fontSize: small ? 12 : 13, fontWeight: 500,
-      }}>
-        <svg width={small ? 14 : 18} height={small ? 14 : 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <div style={{ display: "flex", gap: 8 }}>
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handle} style={{ display: "none" }} />
+      <input ref={galleryRef} type="file" accept="image/*" onChange={handle} style={{ display: "none" }} />
+      <button onClick={() => cameraRef.current?.click()} style={btnStyle}>
+        <svg width={small ? 14 : 16} height={small ? 14 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
           <circle cx="12" cy="13" r="4" />
         </svg>
-        {small ? "Фото" : "Сфотографируй еду"}
+        {small ? "Камера" : "Камера"}
       </button>
-    </>
+      <button onClick={() => galleryRef.current?.click()} style={btnStyle}>
+        <svg width={small ? 14 : 16} height={small ? 14 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="M21 15l-5-5L5 21" />
+        </svg>
+        {small ? "Галерея" : "Галерея"}
+      </button>
+    </div>
   );
 }
 
