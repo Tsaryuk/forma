@@ -160,6 +160,7 @@ export default function SettingsTab({ forms, setForms, theme, setTheme }) {
   }
 
   const THEMES = [
+    ["halo",  "Halo"],
     ["light", "Светлая"],
     ["dark",  "Тёмная"],
     ["auto",  "Авто"],

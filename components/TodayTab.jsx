@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Card, Pill, Ring, Dots, BigBtn, Sheet, Field, TextInput, TimeInput, SectionLabel } from "@/components/ui";
 import { getCat, getType, calcDailyScore, timeDiffMin, fmtMins, addHours, askClaude } from "@/lib/helpers";
 import SessionTimer from "@/components/SessionTimer";
@@ -399,8 +399,36 @@ function CheckInLimit({ form, onSave }) {
   </>;
 }
 
+// ── Long press hook ───────────────────────────────────────
+function useLongPress(callback, delay = 500) {
+  const timerRef = useRef(null);
+  const prevented = useRef(false);
+
+  const start = useCallback((e) => {
+    prevented.current = false;
+    timerRef.current = setTimeout(() => {
+      prevented.current = true;
+      callback(e);
+    }, delay);
+  }, [callback, delay]);
+
+  const cancel = useCallback(() => {
+    clearTimeout(timerRef.current);
+  }, []);
+
+  return {
+    onTouchStart: start,
+    onTouchEnd: cancel,
+    onTouchMove: cancel,
+    onMouseDown: start,
+    onMouseUp: cancel,
+    onMouseLeave: cancel,
+    shouldPreventClick: () => prevented.current,
+  };
+}
+
 // ── Activity card (wellness style) ────────────────────────
-function ActivityCard({ form, done, onOpen }) {
+function ActivityCard({ form, done, onOpen, onLongPress }) {
   const cat = getCat(form.cat);
   const tp = getType(form.type);
   const mealAllDone = form.type === "meal" && form.meals?.every(m => m.done);
@@ -428,12 +456,16 @@ function ActivityCard({ form, done, onOpen }) {
     statusColor = cnt === 3 ? "var(--green)" : "var(--txt3)";
   }
 
+  const longPress = useLongPress(() => onLongPress?.(), 500);
+
   // Mini bar for streaks
   const maxStreak = 60;
   const streakPct = Math.min(100, Math.round(form.streak / maxStreak * 100));
 
   return (
-    <Card onClick={onOpen} data-form={form.type} style={{
+    <Card onClick={(e) => { if (!longPress.shouldPreventClick()) onOpen(); }} data-form={form.type}
+      {...{ onTouchStart: longPress.onTouchStart, onTouchEnd: longPress.onTouchEnd, onTouchMove: longPress.onTouchMove, onMouseDown: longPress.onMouseDown, onMouseUp: longPress.onMouseUp, onMouseLeave: longPress.onMouseLeave }}
+      style={{
       marginBottom: 10,
       opacity: isDone && form.type !== "meal" ? 0.6 : 1,
       borderLeft: `3px solid ${isDone ? "var(--green)" : cat.color}`,
@@ -494,9 +526,49 @@ function ActivityCard({ form, done, onOpen }) {
   );
 }
 
+// ── Quick edit sheet for form settings ─────────────────────
+function QuickEditSheet({ form, onSave, onClose, onDelete }) {
+  const [name, setName] = useState(form?.name || "");
+  const [target, setTarget] = useState(form?.target || "");
+  if (!form) return null;
+  return (
+    <Sheet open title="Редактировать" onClose={onClose}>
+      <Field label="Название">
+        <TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Название формы" />
+      </Field>
+      {(form.type === "time") && (
+        <Field label="Целевое время">
+          <TimeInput value={target} onChange={e => setTarget(e.target.value)} />
+        </Field>
+      )}
+      {(form.type === "duration") && (
+        <Field label="Цель (минуты)">
+          <input type="number" value={target} onChange={e => setTarget(Number(e.target.value))}
+            style={{ width: "100%", padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 16, fontWeight: 500, outline: "none", boxSizing: "border-box" }} />
+        </Field>
+      )}
+      {(form.type === "steps") && (
+        <Field label="Цель (шагов)">
+          <input type="number" value={target} onChange={e => setTarget(Number(e.target.value))}
+            style={{ width: "100%", padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 16, fontWeight: 500, outline: "none", boxSizing: "border-box" }} />
+        </Field>
+      )}
+      <BigBtn onClick={() => { onSave({ name, target }); onClose(); }} color="var(--accent)">Сохранить</BigBtn>
+      <button onClick={() => { onDelete(); onClose(); }} style={{
+        width: "100%", padding: "12px", marginTop: 12, borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--red)", background: "transparent",
+        color: "var(--red)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+      }}>
+        Удалить форму
+      </button>
+    </Sheet>
+  );
+}
+
 // ── TODAY TAB ─────────────────────────────────────────────
 export default function TodayTab({ forms, setForms, userId, userName }) {
   const [activeId, setActiveId] = useState(null);
+  const [editId, setEditId] = useState(null);
   const [sessionForm, setSessionForm] = useState(null);
   const score = calcDailyScore(forms);
   const maxScore = forms.reduce((a, f) => a + f.pts, 0);
@@ -559,7 +631,7 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
       </p>
     </div>
 
-    {pending.map(f => <ActivityCard key={f.id} form={f} onOpen={() => setActiveId(f.id)} />)}
+    {pending.map(f => <ActivityCard key={f.id} form={f} onOpen={() => setActiveId(f.id)} onLongPress={() => setEditId(f.id)} />)}
 
     {done.length > 0 && (
       <>
@@ -570,7 +642,7 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
         }}>
           Выполнено
         </p>
-        {done.map(f => <ActivityCard key={f.id} form={f} done onOpen={() => setActiveId(f.id)} />)}
+        {done.map(f => <ActivityCard key={f.id} form={f} done onOpen={() => setActiveId(f.id)} onLongPress={() => setEditId(f.id)} />)}
       </>
     )}
 
@@ -596,6 +668,16 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
           setSessionForm(null);
         }}
         onClose={() => setSessionForm(null)}
+      />
+    )}
+
+    {/* Quick edit */}
+    {editId && (
+      <QuickEditSheet
+        form={forms.find(f => f.id === editId)}
+        onSave={(patch) => setForms(fs => fs.map(f => f.id === editId ? { ...f, ...patch } : f))}
+        onClose={() => setEditId(null)}
+        onDelete={() => setForms(fs => fs.filter(f => f.id !== editId))}
       />
     )}
 

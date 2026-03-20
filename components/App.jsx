@@ -8,7 +8,7 @@ import TodayTab       from "@/components/TodayTab";
 import DiaryTab       from "@/components/DiaryTab";
 import CalendarTab    from "@/components/CalendarTab";
 import SettingsTab    from "@/components/SettingsTab";
-import Onboarding    from "@/components/Onboarding";
+import Onboarding     from "@/components/Onboarding";
 
 // ── Nav icons ─────────────────────────────────────────────
 function IconDashboard({ active }) {
@@ -99,106 +99,38 @@ export default function App() {
 
   return (
     <div style={{
-      maxWidth: 430, margin: "0 auto",
-      minHeight: "100vh", background: "var(--bg)",
-      position: "relative",
+      minHeight: "100vh",
+      maxWidth: 480,
+      margin: "0 auto",
+      background: "var(--bg)",
+      padding: "14px 12px 92px",
+      color: "var(--txt)",
     }}>
-      {/* ── Header ── */}
-      <div style={{
-        height: 54, background: "var(--bg)",
-        position: "sticky", top: 0, zIndex: 100,
-      }}>
-        <div style={{ padding: "14px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 12,
-            background: "var(--surface)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, fontWeight: 600, color: "var(--accent)",
-            boxShadow: "var(--shadow-sm)",
-          }}>
-            {userName?.[0]?.toUpperCase() || "Д"}
-          </div>
-          <span style={{
-            fontSize: 13, fontWeight: 500, color: "var(--txt)",
-            letterSpacing: 0.2,
-          }}>
-            {dateStr}
-          </span>
-          <div style={{
-            width: 34, height: 34, borderRadius: 12,
-            background: "var(--surface)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "var(--shadow-sm)",
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txt2)" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </div>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div>
+          <p style={{ margin: 0, color: "var(--txt3)", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Foma</p>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{dateStr}</h1>
         </div>
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 14, background: "var(--surface)", border: "1px solid var(--border)", fontSize: 15, fontWeight: 600, color: "var(--accent)" }}>
+          {userName?.[0]?.toUpperCase()}
+        </div>
+      </header>
+
+      <div>
+        {tab === "today" && <TodayTab forms={forms} setForms={setForms} userId={profile?.id} userName={userName} />}
+        {tab === "diary" && <DiaryTab userName={userName} userId={profile?.id} />}
+        {tab === "calendar" && <CalendarTab userId={profile?.id} userName={userName} forms={forms} />}
+        {tab === "settings" && <SettingsTab forms={forms} setForms={setForms} theme={pref} setTheme={setPref} />}
       </div>
 
-      {/* ── Content ── */}
-      <div style={{ padding: "10px 16px 100px" }}>
-
-        {tab === "today" && (
-          <TodayTab forms={forms} setForms={setForms} userId={profile?.id} userName={userName} />
-        )}
-
-        {tab === "diary" && (
-          <DiaryTab userName={userName} userId={profile?.id} />
-        )}
-
-        {tab === "calendar" && (
-          <CalendarTab userId={profile?.id} userName={userName} forms={forms} />
-        )}
-
-        {tab === "settings" && (
-          <SettingsTab
-            forms={forms}
-            setForms={setForms}
-            theme={pref}
-            setTheme={setPref}
-          />
-        )}
-      </div>
-
-      {/* ── Bottom nav (floating) ── */}
-      <nav style={{
-        position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)",
-        width: "calc(100% - 32px)", maxWidth: 398,
-        background: "var(--nav-bg)",
-        border: "1px solid var(--border)",
-        borderRadius: 20,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "var(--shadow-lg)",
-        zIndex: 99,
-      }}>
-        <div style={{ display: "flex", padding: "6px 4px" }}>
-          {TABS.map(({ id, label, Icon }) => {
+      <nav style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 28px)", maxWidth: 430, background: "var(--nav-bg)", border: "1px solid var(--border)", borderRadius: 16, padding: "8px 6px", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-lg)", zIndex: 100 }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          {TABS.map(({id,label,Icon}) => {
             const active = tab === id;
             return (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                style={{
-                  flex: 1, border: "none", cursor: "pointer",
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                  padding: "8px 0",
-                  color: active ? "var(--accent)" : "var(--txt3)",
-                  background: active ? "var(--accent-bg)" : "transparent",
-                  borderRadius: 14,
-                  transition: "all .2s",
-                }}
-              >
+              <button key={id} onClick={() => setTab(id)} style={{ flex: 1, border: "none", background: "transparent", color: active ? "var(--accent)" : "var(--txt2)", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "6px 0", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
                 <Icon active={active} />
-                <span style={{
-                  fontSize: 9, fontWeight: active ? 600 : 400,
-                  letterSpacing: 0.3,
-                }}>
-                  {label}
-                </span>
+                {label}
               </button>
             );
           })}

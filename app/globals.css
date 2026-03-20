@@ -7,35 +7,53 @@
 }
 
 :root {
-  --bg:        #F5F3EF;
+  --bg:        #FAF8F5;
   --surface:   #FFFFFF;
-  --surface2:  #EDEBE6;
-  --surface3:  #E2DFD9;
-  --border:    rgba(26,25,23,0.06);
-  --border2:   rgba(26,25,23,0.11);
-  --txt:       #1A1917;
-  --txt2:      #6B6860;
-  --txt3:      #9C9889;
-  --accent:    #C0582E;
-  --accent-bg: #FAF0EB;
-  --green:     #4A7C59;
-  --green-bg:  #EEF5F0;
-  --red:       #B94A48;
-  --red-bg:    #FAF0EF;
+  --surface2:  #F7F5F2;
+  --surface3:  #F0EDE8;
+  --border:    rgba(28,25,23,0.08);
+  --border2:   rgba(28,25,23,0.14);
+  --txt:       #1C1917;
+  --txt2:      #78716C;
+  --txt3:      #A8A29E;
+  --accent:    #D97706;
+  --accent-bg: #FEF3C7;
+  --green:     #16A34A;
+  --green-bg:  #DCFCE7;
+  --red:       #DC2626;
+  --red-bg:    #FEE2E2;
   --blue:      #5B6ABF;
   --blue-bg:   #F0F1FA;
-  --gold:      #C49132;
-  --gold-bg:   #FAF5EB;
+  --gold:      #B45309;
+  --gold-bg:   #FEF3C7;
   --purple:    #8B5CB0;
   --purple-bg: #F6F0FA;
-  --nav-bg:    rgba(255,255,255,0.85);
-  --shadow-sm: 0 1px 3px rgba(26,25,23,0.04), 0 1px 2px rgba(26,25,23,0.02);
-  --shadow:    0 4px 12px rgba(26,25,23,0.06), 0 1px 3px rgba(26,25,23,0.03);
-  --shadow-lg: 0 8px 24px rgba(26,25,23,0.08), 0 2px 6px rgba(26,25,23,0.04);
+  --nav-bg:    rgba(250,248,245,0.88);
+  --shadow-sm: 0 1px 3px rgba(28,25,23,0.05), 0 1px 2px rgba(28,25,23,0.03);
+  --shadow:    0 4px 12px rgba(28,25,23,0.07), 0 1px 3px rgba(28,25,23,0.04);
+  --shadow-lg: 0 8px 24px rgba(28,25,23,0.09), 0 2px 6px rgba(28,25,23,0.05);
   --radius:    20px;
   --radius-sm: 12px;
   --font:      'Manrope', system-ui, sans-serif;
   --font-serif:'Fraunces', Georgia, serif;
+}
+
+[data-theme="light"], [data-theme="halo"] {
+  --bg:        #FAF8F5;
+  --surface:   #FFFFFF;
+  --surface2:  #F7F5F2;
+  --surface3:  #F0EDE8;
+  --border:    rgba(28,25,23,0.08);
+  --border2:   rgba(28,25,23,0.14);
+  --txt:       #1C1917;
+  --txt2:      #78716C;
+  --txt3:      #A8A29E;
+  --accent:    #D97706;
+  --accent-bg: #FEF3C7;
+  --green:     #16A34A;
+  --green-bg:  #DCFCE7;
+  --red:       #DC2626;
+  --red-bg:    #FEE2E2;
 }
 
 [data-theme="dark"] {

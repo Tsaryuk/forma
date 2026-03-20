@@ -146,6 +146,8 @@ export default function MealTracker({ userId }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [editIdx, setEditIdx] = useState(null);
+  const [correction, setCorrection] = useState("");
+  const [refining, setRefining] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const [genSummary, setGenSummary] = useState(false);
@@ -200,6 +202,36 @@ export default function MealTracker({ userId }) {
     setAnalyzing(false);
   }
 
+  async function refineResult() {
+    if (!correction.trim() || !result || refining) return;
+    setRefining(true);
+    try {
+      const content = [];
+      if (photos.length > 0) {
+        photos.forEach(p => {
+          content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.split(",")[1] } });
+        });
+      }
+      content.push({ type: "text", text: `Предыдущий анализ: ${JSON.stringify(result)}\n\nУточнение от пользователя: ${correction.trim()}\n\nПересчитай с учетом уточнения. Ответь JSON в том же формате.` });
+
+      const body = {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 512,
+        system: mealAnalysisPrompt(),
+        messages: [{ role: "user", content }],
+      };
+      const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      const text = data.content?.find(b => b.type === "text")?.text || "";
+      const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      setResult(JSON.parse(cleaned));
+      setCorrection("");
+    } catch (err) {
+      console.error("Refine error:", err);
+    }
+    setRefining(false);
+  }
+
   async function saveMeal() {
     if (!result) return;
     const meal = { ...result, time: timeStr(), timestamp: new Date().toISOString(), photo: photos[0] || null, date: todayStr() };
@@ -242,6 +274,7 @@ export default function MealTracker({ userId }) {
     setDescription("");
     setResult(null);
     setEditIdx(null);
+    setCorrection("");
   }
 
   async function genReport() {
@@ -417,8 +450,34 @@ export default function MealTracker({ userId }) {
               )}
             </Card>
 
+            {/* Refine with text */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={correction}
+                  onChange={e => setCorrection(e.target.value)}
+                  placeholder="Уточни: ещё был салат, хлеб..."
+                  onKeyDown={e => e.key === "Enter" && correction.trim() && refineResult()}
+                  style={{
+                    flex: 1, padding: "10px 14px", borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--border2)", background: "var(--surface2)",
+                    color: "var(--txt)", fontSize: 13, outline: "none",
+                    fontFamily: "var(--font)", boxSizing: "border-box",
+                  }}
+                />
+                <button onClick={refineResult} disabled={!correction.trim() || refining} style={{
+                  padding: "10px 14px", borderRadius: "var(--radius-sm)",
+                  border: "none", background: "var(--accent)", color: "#fff",
+                  fontSize: 12, fontWeight: 600, cursor: !correction.trim() || refining ? "not-allowed" : "pointer",
+                  opacity: !correction.trim() || refining ? 0.5 : 1, whiteSpace: "nowrap",
+                }}>
+                  {refining ? "..." : "Дополнить"}
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => { setResult(null); }} style={{
+              <button onClick={() => { setResult(null); setCorrection(""); }} style={{
                 flex: 1, padding: "12px", borderRadius: "var(--radius-sm)",
                 border: "1px solid var(--border2)", background: "transparent",
                 color: "var(--txt2)", fontSize: 13, cursor: "pointer",

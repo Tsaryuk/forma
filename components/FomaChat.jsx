@@ -5,18 +5,30 @@ import { askClaude } from "@/lib/helpers";
 import { buildFomaContext, fomaSystemPrompt } from "@/lib/ai-context";
 import { Card } from "@/components/ui";
 
-// Build local context from app state (localStorage)
+// Build full local context from all app state (localStorage)
 function buildLocalContext(forms) {
   const parts = [];
+  const now = new Date();
+  const currentTime = now.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+  const today = now.toISOString().slice(0, 10);
+
+  parts.push(`СЕЙЧАС: ${currentTime}, ${now.toLocaleDateString("ru", { weekday: "long", day: "numeric", month: "long" })}`);
 
   // Forms status
   if (forms && forms.length > 0) {
     const formLines = forms.map(f => {
       let status = f.checkedToday ? "выполнено" : "не выполнено";
-      if (f.type === "time" && f.checkedAt) status = `отмечено в ${f.checkedAt}`;
-      if (f.type === "duration" && f.checkedToday) status = `${f.logged} мин`;
-      if (f.type === "steps" && f.checkedToday) status = `${f.logged} шагов`;
-      return `- ${f.name}: ${status}`;
+      if (f.type === "time" && f.checkedAt) status = `отмечено в ${f.checkedAt} (цель: ${f.target})`;
+      else if (f.type === "time") status = `не отмечено (цель: ${f.target})`;
+      if (f.type === "duration" && f.checkedToday) status = `${f.logged}/${f.target} мин`;
+      else if (f.type === "duration") status = `0/${f.target} мин`;
+      if (f.type === "steps" && f.checkedToday) status = `${f.logged}/${f.target} шагов`;
+      else if (f.type === "steps") status = `0/${f.target} шагов`;
+      if (f.type === "meal") {
+        const done = (f.meals || []).filter(m => m.done).length;
+        status = `${done}/3 приемов`;
+      }
+      return `- ${f.name} (${f.type}): ${status}, стрик: ${f.streak || 0}`;
     });
     parts.push(`ФОРМЫ СЕГОДНЯ:\n${formLines.join("\n")}`);
   }
@@ -25,7 +37,6 @@ function buildLocalContext(forms) {
   try {
     const mealsRaw = localStorage.getItem("forma_meals_today");
     const mealsDate = localStorage.getItem("forma_meals_date");
-    const today = new Date().toISOString().slice(0, 10);
     if (mealsRaw && mealsDate === today) {
       const meals = JSON.parse(mealsRaw);
       if (meals.length > 0) {
@@ -33,10 +44,44 @@ function buildLocalContext(forms) {
         const totalP = meals.reduce((s, m) => s + (m.protein || 0), 0);
         const totalF = meals.reduce((s, m) => s + (m.fat || 0), 0);
         const totalC = meals.reduce((s, m) => s + (m.carbs || 0), 0);
+        const lastMeal = meals[meals.length - 1];
         const mealLines = meals.map(m =>
           `- ${m.time} ${m.dish} — ${m.calories} ккал (Б:${m.protein} Ж:${m.fat} У:${m.carbs})`
         );
-        parts.push(`ЕДА СЕГОДНЯ (${totalCal} ккал, Б:${totalP} Ж:${totalF} У:${totalC}):\n${mealLines.join("\n")}`);
+        parts.push(`ЕДА СЕГОДНЯ (итого: ${totalCal} ккал, Б:${totalP} Ж:${totalF} У:${totalC}):\n${mealLines.join("\n")}\nПоследний прием: ${lastMeal.time}`);
+      } else {
+        parts.push("ЕДА СЕГОДНЯ: пока не ел");
+      }
+    } else {
+      parts.push("ЕДА СЕГОДНЯ: пока не ел");
+    }
+  } catch {}
+
+  // Tasks from localStorage
+  try {
+    const tasksRaw = localStorage.getItem("forma_tasks");
+    if (tasksRaw) {
+      const tasks = JSON.parse(tasksRaw).filter(t => t.date === today);
+      if (tasks.length > 0) {
+        const done = tasks.filter(t => t.done).length;
+        const lines = tasks.map(t => `- ${t.done ? "✓" : "○"} ${t.title}`);
+        parts.push(`ЗАДАЧИ (${done}/${tasks.length}):\n${lines.join("\n")}`);
+      }
+    }
+  } catch {}
+
+  // Experiments from localStorage
+  try {
+    const expRaw = localStorage.getItem("forma_experiments");
+    if (expRaw) {
+      const exps = JSON.parse(expRaw);
+      if (exps.length > 0) {
+        const lines = exps.map(e => {
+          const done = e.daysDone?.length || 0;
+          const finished = done >= e.days;
+          return `- ${e.icon} ${e.name}: ${done}/${e.days} дней ${finished ? "(завершен)" : "(активен)"}`;
+        });
+        parts.push(`ЭКСПЕРИМЕНТЫ:\n${lines.join("\n")}`);
       }
     }
   } catch {}
@@ -45,9 +90,9 @@ function buildLocalContext(forms) {
   try {
     const diaryRaw = localStorage.getItem("forma_diary");
     if (diaryRaw) {
-      const entries = JSON.parse(diaryRaw).slice(0, 3);
+      const entries = JSON.parse(diaryRaw).slice(0, 5);
       if (entries.length > 0) {
-        const lines = entries.map(e => `- ${e.date}: ${e.emotion || "?"} — ${(e.text || "").slice(0, 80)}`);
+        const lines = entries.map(e => `- ${e.date}: ${e.emotion || "?"} — ${(e.text || "").slice(0, 100)}`);
         parts.push(`ДНЕВНИК (последние):\n${lines.join("\n")}`);
       }
     }
@@ -237,7 +282,7 @@ export default function FomaChat({ userId, userName, forms }) {
 
       {/* Input */}
       <div style={{
-        display: "flex", gap: 8, alignItems: "flex-end",
+        display: "flex", gap: 8, alignItems: "center",
       }}>
         <div style={{ flex: 1, position: "relative" }}>
           <textarea
@@ -248,19 +293,19 @@ export default function FomaChat({ userId, userName, forms }) {
             placeholder="Напиши Фоме..."
             rows={1}
             style={{
-              width: "100%", padding: "11px 44px 11px 14px",
-              borderRadius: 16, border: "1px solid var(--border2)",
+              width: "100%", padding: "10px 40px 10px 14px",
+              borderRadius: 14, border: "1px solid var(--border2)",
               background: "var(--surface2)", color: "var(--txt)",
               fontSize: 14, outline: "none", resize: "none",
               fontFamily: "var(--font)", lineHeight: 1.4,
-              boxSizing: "border-box",
+              boxSizing: "border-box", height: 42,
             }}
           />
           <button
             onClick={isListening ? stopVoice : startVoice}
             style={{
-              position: "absolute", right: 6, bottom: 6,
-              width: 32, height: 32, borderRadius: "50%",
+              position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+              width: 28, height: 28, borderRadius: "50%",
               border: "none", cursor: "pointer",
               background: isListening ? "#EF4444" : "transparent",
               display: "flex", alignItems: "center", justifyContent: "center",
