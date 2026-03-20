@@ -82,10 +82,11 @@ function MealRow({ meal, onEdit, onDelete }) {
   const label = MEAL_LABELS[meal.meal_type] || "Прием";
   const icon = MEAL_ICONS[meal.meal_type] || "\u{1F37D}";
   return (
-    <div style={{
+    <div onClick={onEdit} style={{
       display: "flex", alignItems: "center", gap: 10,
       padding: "10px 0",
       borderBottom: "1px solid var(--border)",
+      cursor: "pointer",
     }}>
       <span style={{ fontSize: 18 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -96,7 +97,7 @@ function MealRow({ meal, onEdit, onDelete }) {
           </span>
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center" }}>
-          <span style={{ fontSize: 10, color: "var(--txt3)" }}>{meal.time}</span>
+          <span style={{ fontSize: 10, color: "var(--txt3)" }}>{meal.time} · {label}</span>
           <MacroChip label="Б" value={meal.protein} color="var(--blue)" />
           <MacroChip label="Ж" value={meal.fat} color="var(--gold)" />
           <MacroChip label="У" value={meal.carbs} color="var(--green)" />
@@ -481,6 +482,29 @@ export default function MealTracker({ userId }) {
                 </div>
               )}
             </Card>
+
+            {/* Meal type selector */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 7 }}>
+                Тип приема
+              </label>
+              <div style={{ display: "flex", gap: 6 }}>
+                {Object.entries(MEAL_LABELS).map(([key, label]) => (
+                  <button key={key} onClick={() => setResult(prev => ({ ...prev, meal_type: key }))} style={{
+                    flex: 1, padding: "8px 4px", borderRadius: "var(--radius-sm)",
+                    border: `1px solid ${result.meal_type === key ? "var(--accent)" : "var(--border2)"}`,
+                    background: result.meal_type === key ? "var(--accent-bg)" : "var(--surface2)",
+                    color: result.meal_type === key ? "var(--accent)" : "var(--txt2)",
+                    fontSize: 11, fontWeight: result.meal_type === key ? 600 : 400,
+                    cursor: "pointer", transition: "all .12s",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                  }}>
+                    <span style={{ fontSize: 16 }}>{MEAL_ICONS[key]}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Refine with text */}
             <div style={{ marginBottom: 12 }}>

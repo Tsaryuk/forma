@@ -31,6 +31,7 @@ export default function DiaryTab({ userName, userId }) {
   const [analyzing, setAnalyzing] = useState(false);
   const recognitionRef = useRef(null);
 
+  const [editDate, setEditDate] = useState(null);
   const todayEntry = entries.find(e => e.date === todayKey());
   const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
 
@@ -134,7 +135,7 @@ export default function DiaryTab({ userName, userId }) {
 
   async function save() {
     if (!emotion && !text.trim()) return;
-    const key = todayKey();
+    const key = editDate || todayKey();
     const entry = {
       date: key,
       emotion: emotion,
@@ -163,9 +164,11 @@ export default function DiaryTab({ userName, userId }) {
     setEmotion(null);
     setText("");
     setAiReply("");
+    setEditDate(null);
   }
 
   function openNew() {
+    setEditDate(null);
     if (todayEntry) {
       setEmotion(todayEntry.emotion);
       setText(todayEntry.text);
@@ -175,6 +178,14 @@ export default function DiaryTab({ userName, userId }) {
       setText("");
       setAiReply("");
     }
+    setShowNew(true);
+  }
+
+  function openEdit(entry) {
+    setEditDate(entry.date);
+    setEmotion(entry.emotion);
+    setText(entry.text || "");
+    setAiReply(entry.aiReply || "");
     setShowNew(true);
   }
 
@@ -214,7 +225,7 @@ export default function DiaryTab({ userName, userId }) {
         {sorted.map(entry => {
           const em = EMOTIONS.find(e => e.id === entry.emotion);
           return (
-            <Card key={entry.date} style={{ padding: "14px 16px" }}>
+            <Card key={entry.date} onClick={() => openEdit(entry)} style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: entry.text || entry.aiReply ? 8 : 0 }}>
                 <span style={{ fontSize: 12, color: "var(--txt3)", fontWeight: 500 }}>
                   {formatDate(entry.date)}
@@ -249,7 +260,7 @@ export default function DiaryTab({ userName, userId }) {
       </div>
 
       {/* ── New entry sheet ── */}
-      <Sheet open={showNew} onClose={() => { setShowNew(false); stopVoice(); }} title={todayEntry ? "Изменить запись" : "Новая запись"}>
+      <Sheet open={showNew} onClose={() => { setShowNew(false); stopVoice(); setEditDate(null); }} title={editDate ? `Запись: ${formatDate(editDate)}` : todayEntry ? "Изменить запись" : "Новая запись"}>
         <div style={{ padding: "0 4px" }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: "var(--txt2)", marginBottom: 8 }}>
             Что на уме?
