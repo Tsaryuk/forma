@@ -66,6 +66,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const saved = localStorage.getItem("forma_forms_date");
+    if (saved !== today) {
+      setForms(prev => prev.map(f => ({
+        ...f,
+        checkedToday: false,
+        brokenToday: false,
+        logged: 0,
+        spent: 0,
+      })));
+      localStorage.setItem("forma_forms_date", today);
+    }
+  }, []);
+
+  useEffect(() => {
     onIdsUpdated.current = (idMap) => {
       setForms(fs => fs.map(f => idMap[f.id] ? { ...f, id: idMap[f.id] } : f));
     };
