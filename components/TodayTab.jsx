@@ -7,11 +7,14 @@ import Mascot from "@/components/Mascot";
 import FomaChat from "@/components/FomaChat";
 import MealTracker from "@/components/MealTracker";
 
-const SIM_NOW = "08:47";
+function nowHHMM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
 
 // ── Check-in: Time ────────────────────────────────────────
 function CheckInTime({ form, onSave, onClose }) {
-  const [t, setT] = useState(SIM_NOW);
+  const [t, setT] = useState(nowHHMM);
   const diff = timeDiffMin(form.target, t);
   const exact = Math.abs(diff) <= 5;
   const color = exact ? "var(--green)" : diff > 0 ? (diff < 30 ? "var(--gold)" : "var(--red)") : "var(--blue)";
@@ -278,7 +281,7 @@ function CheckInMeal({ form, onSave }) {
   const nextIdx = meals.findIndex(m => !m.done);
   const mealColors = ["var(--accent)", "var(--blue)", "var(--green)"];
   function doMeal(idx) {
-    const now = ["08:30", "12:45", "17:00"][idx];
+    const now = nowHHMM();
     const next = meals.map((m, i) => i === idx ? { ...m, done: true, time: now } : m);
     setMeals(next);
     onSave({ meals: next, lastAt: now, checkedToday: next.every(m => m.done) });

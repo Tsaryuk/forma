@@ -75,6 +75,9 @@ export default function App() {
         brokenToday: false,
         logged: 0,
         spent: 0,
+        ...(f.type === "meal" && f.meals
+          ? { meals: f.meals.map(m => ({ ...m, done: false, time: null })), lastAt: null }
+          : {}),
       })));
       localStorage.setItem("forma_forms_date", today);
     }
