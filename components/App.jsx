@@ -123,10 +123,10 @@ export default function App() {
     }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div>
-          <p style={{ margin: 0, color: "var(--txt3)", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>Foma</p>
+          <p style={{ margin: 0, color: "var(--accent)", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700 }}>Форма</p>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{dateStr}</h1>
         </div>
-        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 14, background: "var(--surface)", border: "1px solid var(--border)", fontSize: 15, fontWeight: 600, color: "var(--accent)" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 14, background: "var(--accent-bg)", border: "1.5px solid var(--accent)", fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>
           {userName?.[0]?.toUpperCase()}
         </div>
       </header>

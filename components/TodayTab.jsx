@@ -467,13 +467,14 @@ function ActivityCard({ form, done, onOpen, onLongPress }) {
       {...{ onTouchStart: longPress.onTouchStart, onTouchEnd: longPress.onTouchEnd, onTouchMove: longPress.onTouchMove, onMouseDown: longPress.onMouseDown, onMouseUp: longPress.onMouseUp, onMouseLeave: longPress.onMouseLeave }}
       style={{
       marginBottom: 10,
-      opacity: isDone && form.type !== "meal" ? 0.6 : 1,
+      opacity: isDone && form.type !== "meal" ? 0.72 : 1,
       borderLeft: `3px solid ${isDone ? "var(--green)" : cat.color}`,
+      transition: "opacity .3s",
     }} pad="16px 18px">
       <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
         <div style={{
           width: 44, height: 44, borderRadius: 14,
-          background: isDone ? "var(--green-bg)" : `${cat.color}12`,
+          background: isDone ? "var(--green-bg)" : `${cat.color}16`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 20, flexShrink: 0,
         }}>
@@ -591,18 +592,30 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
     <Card style={{ marginBottom: 16, overflow: "hidden" }} pad="0">
       <div style={{
         background: "linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%)",
-        borderBottom: "1px solid var(--border)",
       }}>
         <Mascot pct={pct} forms={forms} hasBroken={hasBroken} />
+
+        {/* Daily progress bar */}
+        <div style={{ padding: "0 20px 18px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "var(--txt3)", letterSpacing: 0.8, textTransform: "uppercase" }}>Прогресс дня</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)", transition: "color .6s" }}>{pct}%</span>
+          </div>
+          <div style={{ height: 5, borderRadius: 3, background: "var(--surface3)", overflow: "hidden" }}>
+            <div style={{
+              height: "100%", borderRadius: 3,
+              background: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)",
+              width: `${pct}%`,
+              transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background .6s",
+            }} />
+          </div>
+        </div>
       </div>
 
       {/* Stats row */}
-      <div style={{
-        display: "flex", padding: "14px 18px",
-        gap: 0,
-      }}>
+      <div style={{ display: "flex", borderTop: "1px solid var(--border)", padding: "14px 18px", gap: 0 }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", lineHeight: 1 }}>{score}</p>
+          <p style={{ fontSize: 24, fontWeight: 300, lineHeight: 1, transition: "color .6s", color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--txt)" }}>{score}</p>
           <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>очков</p>
         </div>
         <div style={{ width: 1, background: "var(--border)" }} />
@@ -623,9 +636,21 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
       display: "flex", justifyContent: "space-between", alignItems: "center",
       marginBottom: 10, padding: "0 2px",
     }}>
-      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
-        Активности
-      </p>
+      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
+          Активности
+        </p>
+        {pending.length > 0 && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 17, height: 17, borderRadius: "50%",
+            background: "var(--accent)", color: "#fff",
+            fontSize: 9, fontWeight: 700, lineHeight: 1,
+          }}>
+            {pending.length}
+          </span>
+        )}
+      </div>
       <p style={{ fontSize: 11, color: "var(--txt3)" }}>
         {new Date().toLocaleDateString("ru", { weekday: "short", day: "numeric", month: "short" })}
       </p>
