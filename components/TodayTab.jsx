@@ -466,34 +466,35 @@ function ActivityCard({ form, done, onOpen, onLongPress }) {
     <Card onClick={(e) => { if (!longPress.shouldPreventClick()) onOpen(); }} data-form={form.type}
       {...{ onTouchStart: longPress.onTouchStart, onTouchEnd: longPress.onTouchEnd, onTouchMove: longPress.onTouchMove, onMouseDown: longPress.onMouseDown, onMouseUp: longPress.onMouseUp, onMouseLeave: longPress.onMouseLeave }}
       style={{
-      marginBottom: 10,
-      opacity: isDone && form.type !== "meal" ? 0.72 : 1,
+      marginBottom: 8,
+      opacity: isDone && form.type !== "meal" ? 0.68 : 1,
       borderLeft: `3px solid ${isDone ? "var(--green)" : cat.color}`,
       transition: "opacity .3s",
-    }} pad="16px 18px">
-      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+    }} pad="14px 16px">
+      <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
         <div style={{
-          width: 44, height: 44, borderRadius: 14,
-          background: isDone ? "var(--green-bg)" : `${cat.color}16`,
+          width: 42, height: 42, borderRadius: 13,
+          background: isDone ? "var(--green-bg)" : `${cat.color}18`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, flexShrink: 0,
+          fontSize: 18, flexShrink: 0,
+          border: `1px solid ${isDone ? "var(--green)" : `${cat.color}28`}`,
         }}>
-          {isDone ? <span style={{ color: "var(--green)", fontSize: 18, fontWeight: 600 }}>✓</span> : <span>{tp.icon}</span>}
+          {isDone ? <span style={{ color: "var(--green)", fontSize: 16, fontWeight: 700 }}>✓</span> : <span>{tp.icon}</span>}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
             <span style={{ fontWeight: 600, fontSize: 14, color: isDone ? "var(--green)" : "var(--txt)" }}>
               {form.name}
             </span>
             {statusText && (
-              <span style={{ fontSize: 12, fontWeight: 600, color: statusColor }}>{statusText}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: "2px 7px", borderRadius: 6 }}>{statusText}</span>
             )}
           </div>
 
           {/* Streak bar */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--surface3)", overflow: "hidden" }}>
+            <div style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--surface3)", overflow: "hidden" }}>
               <div style={{
                 height: "100%", borderRadius: 2,
                 background: isDone ? "var(--green)" : cat.color,
@@ -502,8 +503,8 @@ function ActivityCard({ form, done, onOpen, onLongPress }) {
               }} />
             </div>
             <span style={{
-              fontSize: 11, color: "var(--txt3)", fontWeight: 500,
-              minWidth: 32, textAlign: "right",
+              fontSize: 10, color: "var(--txt3)", fontWeight: 600,
+              minWidth: 28, textAlign: "right", letterSpacing: 0.2,
             }}>
               {form.streak}д
             </span>
@@ -597,13 +598,19 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
 
         {/* Daily progress bar */}
         <div style={{ padding: "0 20px 18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: "var(--txt3)", letterSpacing: 0.8, textTransform: "uppercase" }}>Прогресс дня</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)", transition: "color .6s" }}>{pct}%</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>Прогресс дня</span>
+            <span style={{
+              fontSize: 11, fontWeight: 700,
+              color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)",
+              transition: "color .6s",
+              background: pct >= 80 ? "var(--green-bg)" : hasBroken ? "var(--red-bg)" : "var(--accent-bg)",
+              padding: "2px 7px", borderRadius: 6,
+            }}>{pct}%</span>
           </div>
-          <div style={{ height: 5, borderRadius: 3, background: "var(--surface3)", overflow: "hidden" }}>
+          <div style={{ height: 6, borderRadius: 4, background: "var(--surface3)", overflow: "hidden" }}>
             <div style={{
-              height: "100%", borderRadius: 3,
+              height: "100%", borderRadius: 4,
               background: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)",
               width: `${pct}%`,
               transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background .6s",
@@ -615,18 +622,18 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
       {/* Stats row */}
       <div style={{ display: "flex", borderTop: "1px solid var(--border)", padding: "14px 18px", gap: 0 }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 24, fontWeight: 300, lineHeight: 1, transition: "color .6s", color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--txt)" }}>{score}</p>
-          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>очков</p>
+          <p style={{ fontSize: 26, fontWeight: 600, lineHeight: 1, transition: "color .6s", color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)", letterSpacing: -0.5 }}>{score}</p>
+          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 4, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 500 }}>очков</p>
         </div>
         <div style={{ width: 1, background: "var(--border)" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", lineHeight: 1 }}>{doneCount}/{forms.length}</p>
-          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>форм</p>
+          <p style={{ fontSize: 26, fontWeight: 600, color: "var(--txt)", lineHeight: 1, letterSpacing: -0.5 }}>{doneCount}<span style={{ fontSize: 14, fontWeight: 400, color: "var(--txt3)" }}>/{forms.length}</span></p>
+          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 4, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 500 }}>форм</p>
         </div>
         <div style={{ width: 1, background: "var(--border)" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", lineHeight: 1 }}>{forms.reduce((a, f) => Math.max(a, f.streak), 0)}</p>
-          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 3, letterSpacing: 0.3 }}>макс. стрик</p>
+          <p style={{ fontSize: 26, fontWeight: 600, color: "var(--txt)", lineHeight: 1, letterSpacing: -0.5 }}>{forms.reduce((a, f) => Math.max(a, f.streak), 0)}</p>
+          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 4, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 500 }}>стрик</p>
         </div>
       </div>
     </Card>
@@ -637,21 +644,21 @@ export default function TodayTab({ forms, setForms, userId, userName }) {
       marginBottom: 10, padding: "0 2px",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--txt2)", letterSpacing: 0.8, textTransform: "uppercase" }}>
           Активности
         </p>
         {pending.length > 0 && (
           <span style={{
             display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 17, height: 17, borderRadius: "50%",
+            width: 18, height: 18, borderRadius: "50%",
             background: "var(--accent)", color: "#fff",
-            fontSize: 9, fontWeight: 700, lineHeight: 1,
+            fontSize: 10, fontWeight: 700, lineHeight: 1,
           }}>
             {pending.length}
           </span>
         )}
       </div>
-      <p style={{ fontSize: 11, color: "var(--txt3)" }}>
+      <p style={{ fontSize: 11, color: "var(--txt3)", fontWeight: 500 }}>
         {new Date().toLocaleDateString("ru", { weekday: "short", day: "numeric", month: "short" })}
       </p>
     </div>

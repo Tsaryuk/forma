@@ -123,10 +123,18 @@ export default function App() {
     }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div>
-          <p style={{ margin: 0, color: "var(--accent)", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700 }}>Форма</p>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{dateStr}</h1>
+          <p style={{ margin: 0, color: "var(--accent)", fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: 700 }}>Форма</p>
+          <h1 style={{ margin: 0, fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>{dateStr}</h1>
+          <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--txt2)", fontWeight: 400 }}>
+            Привет, {userName}
+          </p>
         </div>
-        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 14, background: "var(--accent-bg)", border: "1.5px solid var(--accent)", fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 42, height: 42, borderRadius: 13,
+          background: "var(--accent)", fontSize: 16, fontWeight: 700, color: "#fff",
+          boxShadow: "0 2px 8px rgba(217,119,6,0.35)",
+        }}>
           {userName?.[0]?.toUpperCase()}
         </div>
       </header>
@@ -138,12 +146,22 @@ export default function App() {
         {tab === "settings" && <SettingsTab forms={forms} setForms={setForms} theme={pref} setTheme={setPref} />}
       </div>
 
-      <nav style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 28px)", maxWidth: 430, background: "var(--nav-bg)", border: "1px solid var(--border)", borderRadius: 16, padding: "8px 6px", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-lg)", zIndex: 100 }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <nav style={{ position: "fixed", bottom: 14, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 28px)", maxWidth: 430, background: "var(--nav-bg)", border: "1px solid var(--border)", borderRadius: 18, padding: "6px", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", boxShadow: "var(--shadow-lg)", zIndex: 100 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
           {TABS.map(({id,label,Icon}) => {
             const active = tab === id;
             return (
-              <button key={id} onClick={() => setTab(id)} style={{ flex: 1, border: "none", background: "transparent", color: active ? "var(--accent)" : "var(--txt2)", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "6px 0", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+              <button key={id} onClick={() => setTab(id)} style={{
+                flex: 1, border: "none",
+                background: active ? "var(--accent-bg)" : "transparent",
+                color: active ? "var(--accent)" : "var(--txt2)",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                padding: "8px 4px 7px",
+                borderRadius: 12,
+                fontSize: 10, fontWeight: active ? 700 : 500,
+                cursor: "pointer",
+                transition: "background .2s, color .2s",
+              }}>
                 <Icon active={active} />
                 {label}
               </button>
