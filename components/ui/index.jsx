@@ -12,20 +12,15 @@ export function Card({ children, style = {}, onClick, pad = "16px 18px", ...rest
         borderRadius: "var(--radius)",
         padding: pad,
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
         cursor: onClick ? "pointer" : "default",
-        transition: "transform .15s ease, box-shadow .15s ease",
+        transition: "background .12s ease",
         ...style,
       }}
       onMouseEnter={e => {
-        if (onClick) {
-          e.currentTarget.style.boxShadow = "var(--shadow)";
-          e.currentTarget.style.transform = "translateY(-1px)";
-        }
+        if (onClick) e.currentTarget.style.background = "var(--surface2)";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "";
-        e.currentTarget.style.transform = "";
+        if (onClick) e.currentTarget.style.background = "var(--surface)";
       }}
     >
       {children}
@@ -106,36 +101,40 @@ export function Sheet({ open, onClose, title, children, maxH = "92vh" }) {
           position: "fixed", bottom: 0, left: "50%",
           width: "100%", maxWidth: 430,
           background: "var(--surface)",
-          borderRadius: "24px 24px 0 0",
+          borderRadius: "20px 20px 0 0",
           zIndex: 201, maxHeight: maxH,
           display: "flex", flexDirection: "column",
-          animation: closing ? "none" : "slideUp .32s cubic-bezier(.32,.72,0,1)",
+          animation: closing ? "none" : "sheetSlideUp .36s cubic-bezier(.32,.72,0,1)",
           border: "1px solid var(--border)",
           borderBottom: "none",
           transform: `translateX(-50%) translateY(${closing ? "100%" : dragOffset + "px"})`,
-          transition: dragRef.current.dragging ? "none" : "transform .25s cubic-bezier(.32,.72,0,1)",
+          transition: dragRef.current.dragging ? "none" : "transform .28s cubic-bezier(.32,.72,0,1)",
         }}
       >
         {/* Handle bar — drag zone */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 0", cursor: "grab" }}>
-          <div style={{ width: 32, height: 4, borderRadius: 99, background: "var(--surface3)" }} />
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px", cursor: "grab", flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 99, background: "var(--border2)", opacity: 0.7 }} />
         </div>
-        <div style={{ padding: "10px 20px 0", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <h2 style={{ flex: 1, fontSize: 19, fontWeight: 400, color: "var(--txt)" }}>
+        <div style={{ padding: "6px 20px 0", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <h2 style={{ flex: 1, fontSize: 17, fontWeight: 500, color: "var(--txt)", letterSpacing: "-0.02em" }}>
             {title}
           </h2>
           <button
             onClick={handleClose}
+            aria-label="Закрыть"
             style={{
-              width: 28, height: 28, borderRadius: 99,
-              border: "1px solid var(--border2)", background: "var(--surface2)",
-              color: "var(--txt3)", cursor: "pointer", fontSize: 11,
+              width: 32, height: 32, borderRadius: 99,
+              border: "1px solid var(--border)", background: "var(--surface2)",
+              color: "var(--txt2)", cursor: "pointer", fontSize: 13,
               display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "background .15s",
+              transition: "background .12s, color .12s",
+              flexShrink: 0,
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface3)"; e.currentTarget.style.color = "var(--txt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface2)"; e.currentTarget.style.color = "var(--txt2)"; }}
           >✕</button>
         </div>
-        <div data-sheet-content style={{ flex: 1, overflowY: "auto", padding: "14px 20px 40px" }}>
+        <div data-sheet-content style={{ flex: 1, overflowY: "auto", padding: "12px 20px 48px" }}>
           {children}
         </div>
       </div>
@@ -218,6 +217,7 @@ export function BigBtn({ children, onClick, color = "var(--txt)", disabled, type
       disabled={disabled}
       style={{
         width: "100%", padding: "13px 16px",
+        minHeight: 44,
         borderRadius: "var(--radius-sm)",
         border: "none", background: color,
         color: color === "var(--txt)" ? "var(--bg)" : "#fff",
@@ -229,6 +229,8 @@ export function BigBtn({ children, onClick, color = "var(--txt)", disabled, type
       }}
       onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = "scale(.98)"; }}
       onMouseUp={e => { e.currentTarget.style.transform = ""; }}
+      onTouchStart={e => { if (!disabled) e.currentTarget.style.transform = "scale(.98)"; }}
+      onTouchEnd={e => { e.currentTarget.style.transform = ""; }}
     >
       {children}
     </button>

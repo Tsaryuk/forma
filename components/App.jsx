@@ -120,6 +120,41 @@ export default function App() {
     }
   }, [forms, profile?.id]);
 
+  // Handle Apple Health import via URL params (?health_import=1&steps=X&wakeTime=HH:MM&bedTime=HH:MM)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("health_import")) return;
+
+    const steps = params.get("steps");
+    const wakeTime = params.get("wakeTime");
+    const bedTime = params.get("bedTime");
+    const date = params.get("date") || new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (date !== today) return; // Only import today's data
+
+    setForms(prev => prev.map(f => {
+      if (f.id === "f3" && steps) {
+        const n = Number(steps);
+        const target = f.target || 15000;
+        return { ...f, logged: n, checkedToday: n >= target };
+      }
+      if (f.id === "f1" && wakeTime) {
+        return { ...f, checkedAt: wakeTime, checkedToday: true };
+      }
+      if (f.id === "f2" && bedTime) {
+        return { ...f, checkedAt: bedTime, checkedToday: true };
+      }
+      return f;
+    }));
+
+    // Clean URL without reload
+    const url = new URL(window.location.href);
+    url.search = "";
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
   const score = calcDailyScore(forms);
   const maxScore = forms.reduce((s, f) => s + (f.pts || 0), 0);
   const pct = maxScore > 0 ? Math.round(score / maxScore * 100) : 0;
@@ -228,7 +263,8 @@ export default function App() {
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 3,
-                padding: "10px 4px 8px",
+                padding: "11px 4px 9px",
+                minHeight: 52,
                 fontSize: 10,
                 fontWeight: active ? 600 : 400,
                 cursor: "pointer",

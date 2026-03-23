@@ -15,7 +15,23 @@ function Checkbox({ checked, onChange, indeterminate }) {
   return (
     <button
       onClick={onChange}
+      aria-checked={checked}
       style={{
+        // Outer touch target: 44x44
+        width: 44,
+        height: 44,
+        border: "none",
+        background: "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        flexShrink: 0,
+        margin: "-13px -13px",
+        padding: 0,
+      }}
+    >
+      <div style={{
         width: 18,
         height: 18,
         borderRadius: 3,
@@ -24,19 +40,19 @@ function Checkbox({ checked, onChange, indeterminate }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        cursor: "pointer",
-        flexShrink: 0,
         transition: "all .12s",
-      }}
-    >
-      {checked && (
-        <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-          <path d="M1 4.5L4 7.5L10 1.5" stroke="var(--bg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-      {indeterminate && !checked && (
-        <div style={{ width: 8, height: 1.5, background: "var(--txt3)", borderRadius: 1 }} />
-      )}
+        animation: checked ? "checkIn .18s cubic-bezier(.32,.72,0,1)" : "none",
+        flexShrink: 0,
+      }}>
+        {checked && (
+          <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+            <path d="M1 4.5L4 7.5L10 1.5" stroke="var(--bg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        {indeterminate && !checked && (
+          <div style={{ width: 8, height: 1.5, background: "var(--txt3)", borderRadius: 1 }} />
+        )}
+      </div>
     </button>
   );
 }
@@ -94,7 +110,8 @@ function HabitRow({ form, onOpen, onQuickCheck }) {
         display: "flex",
         alignItems: "center",
         gap: 12,
-        padding: "11px 16px",
+        padding: "12px 16px",
+        minHeight: 52,
         borderBottom: "1px solid var(--border)",
         cursor: "pointer",
         background: "var(--surface)",
@@ -369,6 +386,21 @@ function CheckInSteps({ form, onSave }) {
         <p style={{ fontSize: 12, color: "var(--txt3)", marginTop: 4 }}>{pct}% от цели</p>
       </div>
       <button onClick={() => onSave({ logged: steps })} style={btnStyle()}>Сохранить</button>
+      <button
+        onClick={() => {
+          const today = new Date().toISOString().slice(0, 10);
+          window.location.href = `/api/health?health_import=1&steps=${steps}&date=${today}`;
+        }}
+        style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), marginTop: 8 }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+        </svg>
+        Загрузить с Watch
+      </button>
+      <p style={{ fontSize: 11, color: "var(--txt3)", textAlign: "center", marginTop: 8 }}>
+        Настройка автоимпорта — в разделе Настройки → Apple Health
+      </p>
     </div>
   );
 }
