@@ -1,10 +1,8 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
-import { Card, Pill, Ring, Dots, BigBtn, Sheet, Field, TextInput, TimeInput, SectionLabel } from "@/components/ui";
-import { getCat, getType, calcDailyScore, timeDiffMin, fmtMins, addHours, askClaude } from "@/lib/helpers";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Sheet, Field, TextInput, TimeInput } from "@/components/ui";
+import { timeDiffMin, fmtMins, addHours, askClaude } from "@/lib/helpers";
 import SessionTimer from "@/components/SessionTimer";
-import Mascot from "@/components/Mascot";
-import FomaChat from "@/components/FomaChat";
 import MealTracker from "@/components/MealTracker";
 
 function nowHHMM() {
@@ -12,31 +10,182 @@ function nowHHMM() {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-// ── Check-in: Time ────────────────────────────────────────
+// ── Notion-style Checkbox ──────────────────────────────────
+function Checkbox({ checked, onChange, indeterminate }) {
+  return (
+    <button
+      onClick={onChange}
+      style={{
+        width: 18,
+        height: 18,
+        borderRadius: 3,
+        border: checked ? "none" : "1.5px solid var(--border2)",
+        background: checked ? "var(--txt)" : "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        flexShrink: 0,
+        transition: "all .12s",
+      }}
+    >
+      {checked && (
+        <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+          <path d="M1 4.5L4 7.5L10 1.5" stroke="var(--bg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {indeterminate && !checked && (
+        <div style={{ width: 8, height: 1.5, background: "var(--txt3)", borderRadius: 1 }} />
+      )}
+    </button>
+  );
+}
+
+// ── Habit Row ──────────────────────────────────────────────
+function HabitRow({ form, onOpen, onQuickCheck }) {
+  const done = form.checkedToday && !form.brokenToday;
+  const broken = form.brokenToday;
+
+  // Sub-label
+  let sub = "";
+  if (form.type === "time") {
+    sub = form.target;
+    if (form.checkedToday && form.checkedAt) sub = `отмечено в ${form.checkedAt}`;
+  } else if (form.type === "duration") {
+    sub = `${form.target} мин`;
+    if (form.logged) sub = `${form.logged} / ${form.target} мин`;
+  } else if (form.type === "steps") {
+    sub = `${(form.target || 15000).toLocaleString("ru")} шагов`;
+    if (form.logged) sub = `${(form.logged || 0).toLocaleString("ru")} / ${(form.target || 15000).toLocaleString("ru")}`;
+  } else if (form.type === "meal") {
+    const done_ = (form.meals || []).filter(m => m.done).length;
+    sub = `${done_} / ${(form.meals || []).length} приёма`;
+    if (form.lastAt) sub += ` · след. в ${addHours(form.lastAt, form.intervalH || 4)}`;
+  } else if (form.type === "weight") {
+    sub = form.logged ? `${form.logged} кг` : "нажми, чтобы записать";
+    if (form.logged && form.startWeight) {
+      const diff = (form.startWeight - form.logged).toFixed(1);
+      sub += ` · ${diff > 0 ? "−" : "+"}${Math.abs(diff)} кг`;
+    }
+  } else if (form.type === "tasks") {
+    const done_ = (form.tasks || []).filter(t => t.done).length;
+    const total = (form.tasks || []).filter(t => t.text).length;
+    sub = total ? `${done_} / ${total} задач` : "нажми, чтобы добавить";
+  }
+
+  // Progress for steps/duration
+  let pct = 0;
+  if (form.type === "steps") pct = Math.min(100, Math.round((form.logged || 0) / (form.target || 15000) * 100));
+  if (form.type === "duration") pct = Math.min(100, Math.round((form.logged || 0) / (form.target || 60) * 100));
+  if (form.type === "meal") pct = Math.min(100, Math.round((form.meals || []).filter(m => m.done).length / 3 * 100));
+  if (form.type === "tasks") {
+    const total = (form.tasks || []).filter(t => t.text).length;
+    const doneT = (form.tasks || []).filter(t => t.done).length;
+    pct = total ? Math.min(100, Math.round(doneT / total * 100)) : 0;
+  }
+
+  const showProgress = ["steps", "duration", "meal", "tasks"].includes(form.type) && pct > 0;
+  const isComplex = ["weight", "tasks", "meal", "duration", "steps", "time"].includes(form.type);
+
+  return (
+    <div
+      onClick={() => onOpen(form)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "11px 16px",
+        borderBottom: "1px solid var(--border)",
+        cursor: "pointer",
+        background: "var(--surface)",
+        transition: "background .1s",
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
+      onMouseLeave={e => e.currentTarget.style.background = "var(--surface)"}
+    >
+      <div onClick={e => {
+        if (form.type === "boolean" || form.type === "time") {
+          e.stopPropagation();
+          onQuickCheck(form);
+        }
+      }}>
+        <Checkbox
+          checked={done}
+          indeterminate={showProgress && !done}
+          onChange={() => {}}
+        />
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            fontSize: 14,
+            fontWeight: 500,
+            color: done ? "var(--txt3)" : broken ? "var(--red)" : "var(--txt)",
+            textDecoration: done ? "line-through" : "none",
+            letterSpacing: "-0.01em",
+          }}>{form.name}</span>
+          {form.streak > 1 && (
+            <span style={{ fontSize: 11, color: "var(--txt3)", fontWeight: 400 }}>
+              {form.streak}д
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 1 }}>
+          <span style={{ fontSize: 12, color: "var(--txt3)", fontWeight: 400 }}>{sub}</span>
+        </div>
+        {showProgress && (
+          <div style={{ marginTop: 5, height: 2, background: "var(--border)", borderRadius: 1, overflow: "hidden" }}>
+            <div style={{
+              width: `${pct}%`,
+              height: "100%",
+              background: pct >= 100 ? "var(--green)" : "var(--accent)",
+              borderRadius: 1,
+              transition: "width .3s",
+            }} />
+          </div>
+        )}
+      </div>
+
+      <div style={{ color: "var(--txt3)", flexShrink: 0 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ── Check-in: Time ─────────────────────────────────────────
 function CheckInTime({ form, onSave, onClose }) {
   const [t, setT] = useState(nowHHMM);
   const diff = timeDiffMin(form.target, t);
+  const early = diff <= 0;
   const exact = Math.abs(diff) <= 5;
-  const color = exact ? "var(--green)" : diff > 0 ? (diff < 30 ? "var(--gold)" : "var(--red)") : "var(--blue)";
   const pts = exact ? form.pts
     : diff > 0 ? (diff <= 15 ? Math.round(form.pts * .9) : diff <= 30 ? Math.round(form.pts * .6) : Math.round(form.pts * .2))
     : form.pts;
-  return <>
-    <Field label="Фактическое время" hint={`Цель — ${form.target}`}>
-      <TimeInput value={t} onChange={e => setT(e.target.value)} />
-    </Field>
-    <div style={{ padding: "12px 14px", borderRadius: "var(--radius-sm)", background: exact ? "var(--green-bg)" : diff > 0 ? "var(--accent-bg)" : "var(--blue-bg)", marginBottom: 18 }}>
-      <p style={{ fontSize: 13, fontWeight: 500, color, margin: 0 }}>
-        {exact ? `Точно по форме — ${pts}`
-          : diff > 0 ? `Опоздание ${fmtMins(diff)} — ${pts} из ${form.pts}`
-          : `Раньше цели — ${pts}`}
-      </p>
+  const color = exact ? "var(--green)" : diff > 0 ? (diff < 30 ? "var(--gold)" : "var(--red)") : "var(--blue)";
+
+  return (
+    <div style={{ padding: "0 16px 24px" }}>
+      <p style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16 }}>Цель — {form.target}</p>
+      <Field label="Фактическое время">
+        <TimeInput value={t} onChange={e => setT(e.target.value)} />
+      </Field>
+      <div style={{ padding: "10px 12px", borderRadius: 6, background: "var(--surface2)", border: "1px solid var(--border)", marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color, fontWeight: 500, margin: 0 }}>
+          {exact ? `Точно — ${pts} очков`
+            : diff > 0 ? `Опоздание ${fmtMins(diff)} — ${pts} из ${form.pts}`
+            : `Раньше цели — ${pts} очков`}
+        </p>
+      </div>
+      <button onClick={() => onSave({ checkedAt: t })} style={btnStyle()}>Отметить</button>
     </div>
-    <BigBtn onClick={() => onSave({ checkedAt: t })} color={color}>Отметить</BigBtn>
-  </>;
+  );
 }
 
-// ── Check-in: Duration ────────────────────────────────────
+// ── Check-in: Duration ─────────────────────────────────────
 function CheckInDuration({ form, onSave, onStartSession }) {
   const [mins, setMins] = useState(form.logged || 0);
   const [note, setNote] = useState(form.note || "");
@@ -46,8 +195,8 @@ function CheckInDuration({ form, onSave, onStartSession }) {
   const recognitionRef = useRef(null);
   const target = form.target || 60;
   const pct = Math.min(100, Math.round(mins / target * 100));
-  const pts = mins >= target ? form.pts : note ? Math.round(form.pts * pct / 100) : Math.round(form.pts * .5 * pct / 100);
-  const presets = [15, 30, 45, 60, 90, 120];
+  const presets = form.id === "f4" ? [5, 10, 15, 20] : [15, 30, 45, 60, 90, 120];
+  const isReading = form.id === "f6";
 
   function startVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -57,37 +206,25 @@ function CheckInDuration({ form, onSave, onStartSession }) {
     recognition.lang = "ru-RU";
     recognition.interimResults = true;
     recognition.continuous = false;
-    recognition.maxAlternatives = 1;
     let finalText = "";
     recognition.onresult = (e) => {
       let interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) {
-          finalText += t + " ";
-        } else {
-          interim = t;
-        }
+        if (e.results[i].isFinal) { finalText += t + " "; } else { interim = t; }
       }
       const combined = (finalText + interim).trim();
-      if (combined) {
-        setNote(prev => {
-          const base = recognitionRef.current?._baseNote ?? prev;
-          return base ? base + " " + combined : combined;
-        });
-      }
+      if (combined) setNote(prev => {
+        const base = recognitionRef.current?._baseNote ?? prev;
+        return base ? base + " " + combined : combined;
+      });
     };
-    recognition.onerror = (e) => {
-      console.log("Speech error:", e.error);
-      setIsListening(false);
-    };
+    recognition.onerror = () => setIsListening(false);
     recognition.onend = () => {
-      if (finalText.trim()) {
-        setNote(prev => {
-          const base = recognitionRef.current?._baseNote ?? "";
-          return base ? base + " " + finalText.trim() : finalText.trim();
-        });
-      }
+      if (finalText.trim()) setNote(prev => {
+        const base = recognitionRef.current?._baseNote ?? "";
+        return base ? base + " " + finalText.trim() : finalText.trim();
+      });
       setIsListening(false);
     };
     recognition._baseNote = note;
@@ -97,9 +234,7 @@ function CheckInDuration({ form, onSave, onStartSession }) {
   }
 
   function stopVoice() {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch(e) {}
-    }
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch(e) {} }
     setIsListening(false);
   }
 
@@ -108,13 +243,10 @@ function CheckInDuration({ form, onSave, onStartSession }) {
     setGenerating(true);
     try {
       const text = await askClaude({
-        system: `Ты помощник Дениса, который ведёт телеграм-канал о саморазвитии, привычках и осознанности.
-Денис делится мыслями после утреннего чтения.
-Твоя задача — из его заметки/наговоренных мыслей сделать пост для ТГ-канала.
-Формат: короткий (3-5 абзацев), живой, от первого лица, с практическим выводом.
-Без хештегов, без "доброе утро", без формального тона. Как будто пишет другу, но публично.
-Используй emoji умеренно (1-2 на пост). Пиши на русском.`,
-        prompt: `Вот моя заметка после чтения:\n\n"${note}"\n\nСделай из этого пост для телеграм-канала.`,
+        system: `Ты помощник, который ведёт телеграм-канал о саморазвитии и привычках.
+Из заметок после чтения делай короткий живой пост от первого лица.
+Формат: 3-5 абзацев, практический вывод. Без хештегов, без "доброе утро". 1-2 emoji. Русский язык.`,
+        prompt: `Заметка после чтения:\n\n"${note}"\n\nСделай пост для телеграм-канала.`,
         max_tokens: 1024,
       });
       setTgPost(text);
@@ -124,601 +256,496 @@ function CheckInDuration({ form, onSave, onStartSession }) {
     setGenerating(false);
   }
 
-  function copyPost() {
-    navigator.clipboard?.writeText(tgPost);
-  }
-
-  return <>
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginBottom: 20 }}>
-      <div style={{ position: "relative", display: "inline-flex" }}>
-        <Ring pct={pct} size={76} stroke={4} color={pct >= 100 ? "var(--green)" : "var(--accent)"} />
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: 22, fontWeight: 400, color: "var(--txt)" }}>{mins}</span>
-          <span style={{ fontSize: 9, color: "var(--txt3)", letterSpacing: 0.5 }}>мин</span>
-        </div>
-      </div>
-      <div>
-        <p style={{ fontSize: 28, fontWeight: 400, color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
-        <p style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>из {form.pts}</p>
-      </div>
-    </div>
-
-    <button
-      onClick={onStartSession}
-      style={{
-        width: "100%", padding: "14px", marginBottom: 18,
-        borderRadius: "var(--radius-sm)",
-        border: "1px solid var(--accent)",
-        background: "var(--accent-bg)",
-        color: "var(--accent)",
-        fontSize: 14, fontWeight: 600, cursor: "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        transition: "all .15s",
-      }}
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
-      Начать сессию · {target} мин
-    </button>
-
-    <div style={{ position: "relative", marginBottom: 14 }}>
-      <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 1, background: "var(--border)" }} />
-      <p style={{ position: "relative", textAlign: "center", fontSize: 10, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>
-        <span style={{ background: "var(--surface)", padding: "0 10px" }}>или вручную</span>
-      </p>
-    </div>
-
-    <Field label="Сколько минут?">
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {presets.map(v => (
-          <button key={v} onClick={() => setMins(v)} style={{ flex: "1 1 auto", minWidth: 44, padding: "9px 4px", borderRadius: "var(--radius-sm)", border: `1px solid ${mins === v ? "var(--accent)" : "var(--border2)"}`, background: mins === v ? "var(--accent-bg)" : "var(--surface2)", color: mins === v ? "var(--accent)" : "var(--txt2)", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all .12s" }}>{v}</button>
-        ))}
-      </div>
-    </Field>
-
-    <Field label="Главная мысль" hint="Наговори или напиши — AI сделает пост для ТГ">
-      <div style={{ position: "relative" }}>
-        <TextInput value={note} onChange={e => setNote(e.target.value)} placeholder="Что зацепило сегодня?" multiline rows={4} />
-        <button
-          onClick={isListening ? stopVoice : startVoice}
-          style={{
-            position: "absolute", right: 8, bottom: 8,
-            width: 36, height: 36, borderRadius: "50%",
-            border: "none", cursor: "pointer",
-            background: isListening ? "#EF4444" : "var(--accent)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            animation: isListening ? "pulse 1.5s infinite" : "none",
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
-        </button>
-      </div>
-    </Field>
-
-    {isListening && (
-      <p style={{ fontSize: 12, color: "#EF4444", textAlign: "center", marginBottom: 8, fontWeight: 500 }}>
-        Слушаю...
-      </p>
-    )}
-
-    {note.trim() && !tgPost && (
-      <button
-        onClick={generatePost}
-        disabled={generating}
-        style={{
-          width: "100%", padding: "12px", marginBottom: 14,
-          borderRadius: "var(--radius-sm)",
-          border: "1px solid var(--border2)",
-          background: "var(--surface2)",
-          color: "var(--txt)",
-          fontSize: 13, fontWeight: 500, cursor: generating ? "wait" : "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          opacity: generating ? 0.6 : 1,
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </svg>
-        {generating ? "Генерирую..." : "Сгенерировать пост для ТГ"}
+  return (
+    <div style={{ padding: "0 16px 24px" }}>
+      <button onClick={onStartSession} style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), marginBottom: 16 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
+        Запустить таймер · {target} мин
       </button>
-    )}
 
-    {tgPost && (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          marginBottom: 6,
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--txt2)" }}>Пост для Telegram</span>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={generatePost} disabled={generating} style={{
-              padding: "4px 10px", borderRadius: 8, border: "1px solid var(--border2)",
-              background: "var(--surface2)", color: "var(--txt3)", fontSize: 11,
-              cursor: "pointer",
-            }}>
-              {generating ? "..." : "Ещё"}
-            </button>
-            <button onClick={copyPost} style={{
-              padding: "4px 10px", borderRadius: 8, border: "1px solid var(--accent)",
-              background: "var(--accent-bg)", color: "var(--accent)", fontSize: 11,
-              cursor: "pointer", fontWeight: 600,
-            }}>
-              Копировать
-            </button>
-          </div>
+      <Field label="Минут">
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {presets.map(v => (
+            <button key={v} onClick={() => setMins(v)} style={{
+              flex: "1 1 auto", minWidth: 40, padding: "8px 4px",
+              borderRadius: 6,
+              border: `1px solid ${mins === v ? "var(--txt)" : "var(--border)"}`,
+              background: mins === v ? "var(--txt)" : "var(--surface2)",
+              color: mins === v ? "var(--bg)" : "var(--txt2)",
+              fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all .1s",
+            }}>{v}</button>
+          ))}
         </div>
-        <div style={{
-          padding: "12px 14px", borderRadius: "var(--radius-sm)",
-          background: "var(--surface2)", border: "1px solid var(--border)",
-          fontSize: 13, color: "var(--txt)", lineHeight: 1.6,
-          whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto",
-        }}>
-          {tgPost}
-        </div>
-      </div>
-    )}
+      </Field>
 
-    <BigBtn onClick={() => onSave({ logged: mins, note, checkedToday: true })} color={pct >= 100 ? "var(--green)" : "var(--txt)"} disabled={mins === 0}>
-      Сохранить · {pts}
-    </BigBtn>
-
-    <style>{`
-      @keyframes pulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-        50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-      }
-    `}</style>
-  </>;
-}
-
-// ── Check-in: Meal ────────────────────────────────────────
-function CheckInMeal({ form, onSave }) {
-  const [meals, setMeals] = useState(form.meals ?? []);
-  const nextIdx = meals.findIndex(m => !m.done);
-  const mealColors = ["var(--accent)", "var(--blue)", "var(--green)"];
-  function doMeal(idx) {
-    const now = nowHHMM();
-    const next = meals.map((m, i) => i === idx ? { ...m, done: true, time: now } : m);
-    setMeals(next);
-    onSave({ meals: next, lastAt: now, checkedToday: next.every(m => m.done) });
-  }
-  return <>
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
-      {meals.map((m, i) => (
-        <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", borderRadius: "var(--radius-sm)", background: m.done ? "var(--green-bg)" : i === nextIdx ? "var(--surface2)" : "var(--bg)", border: `1px solid ${m.done ? "var(--green)" : "var(--border)"}`, transition: "all .2s" }}>
-          <div style={{ width: 34, height: 34, borderRadius: "var(--radius-sm)", background: m.done ? "var(--green)" : `${mealColors[i]}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: m.done ? "#fff" : mealColors[i], fontWeight: 600, flexShrink: 0 }}>
-            {m.done ? "✓" : ["1", "2", "3"][i]}
+      {isReading && (
+        <Field label="Инвайты" hint="Голосом или текстом">
+          <div style={{ position: "relative" }}>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Что зацепило в книге..."
+              rows={3}
+              style={{
+                width: "100%", padding: "10px 40px 10px 12px",
+                borderRadius: 6, border: "1px solid var(--border)",
+                background: "var(--surface2)", color: "var(--txt)",
+                fontSize: 14, fontFamily: "inherit", resize: "vertical",
+                outline: "none",
+              }}
+            />
+            <button
+              onMouseDown={startVoice} onMouseUp={stopVoice}
+              onTouchStart={startVoice} onTouchEnd={stopVoice}
+              style={{
+                position: "absolute", top: 8, right: 8,
+                width: 28, height: 28, borderRadius: "50%",
+                border: "none",
+                background: isListening ? "var(--red)" : "var(--border2)",
+                color: isListening ? "#fff" : "var(--txt2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
           </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontWeight: 500, fontSize: 14, color: m.done ? "var(--green)" : "var(--txt)", margin: 0 }}>{m.l}</p>
-            <p style={{ fontSize: 11, color: "var(--txt3)", margin: 0 }}>{m.done ? m.time : "Белок · клетчатка · углеводы"}</p>
-          </div>
-          {i === nextIdx && !m.done && (
-            <button onClick={() => doMeal(i)} style={{ padding: "6px 12px", background: "var(--txt)", color: "var(--bg)", border: "none", borderRadius: "var(--radius-sm)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Отметить</button>
+          {note.trim() && (
+            <button onClick={generatePost} disabled={generating} style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), marginTop: 8, fontSize: 12 }}>
+              {generating ? "Генерирую..." : "Пост для ТГ"}
+            </button>
           )}
-        </div>
-      ))}
-    </div>
-    {meals.every(m => m.done) && (
-      <div style={{ padding: "12px 14px", borderRadius: "var(--radius-sm)", background: "var(--green-bg)", border: "1px solid var(--green)", textAlign: "center" }}>
-        <p style={{ color: "var(--green)", fontWeight: 500, fontSize: 13, margin: 0 }}>Все приёмы отмечены</p>
+          {tgPost && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ padding: "12px", borderRadius: 6, background: "var(--surface2)", border: "1px solid var(--border)", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                {tgPost}
+              </div>
+              <button onClick={() => navigator.clipboard?.writeText(tgPost)} style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), marginTop: 6, fontSize: 12 }}>
+                Скопировать
+              </button>
+            </div>
+          )}
+        </Field>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <span style={{ fontSize: 13, color: "var(--txt2)" }}>{pct}% выполнено</span>
+        <span style={{ fontSize: 13, color: "var(--txt2)" }}>{mins} мин</span>
       </div>
-    )}
-  </>;
+      <button onClick={() => onSave({ logged: mins, note })} style={btnStyle()}>Сохранить</button>
+    </div>
+  );
 }
 
-// ── Check-in: Boolean ─────────────────────────────────────
-function CheckInBoolean({ form, onSave }) {
-  const [broken, setBroken] = useState(false);
-  const [note, setNote] = useState("");
-  if (!broken) return <>
-    <div style={{ padding: "24px 0", textAlign: "center" }}>
-      <p style={{ fontSize: 22, color: "var(--txt)", marginBottom: 6 }}>{form.name}</p>
-      <p style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.6, maxWidth: 280, margin: "0 auto 28px" }}>{form.principle}</p>
-    </div>
-    <div style={{ display: "flex", gap: 10 }}>
-      <BigBtn onClick={() => onSave({ checkedToday: true, brokenToday: false })} color="var(--green)">Соблюдал</BigBtn>
-      <button onClick={() => setBroken(true)} style={{ flex: 1, padding: "13px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border2)", background: "transparent", color: "var(--txt2)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Нарушил</button>
-    </div>
-  </>;
-  return <>
-    <div style={{ padding: "12px 14px", borderRadius: "var(--radius-sm)", background: "var(--red-bg)", border: "1px solid var(--red)", marginBottom: 16 }}>
-      <p style={{ fontSize: 13, color: "var(--red)", fontWeight: 500, margin: 0, lineHeight: 1.5 }}>Нарушение — не провал, это сигнал.</p>
-    </div>
-    <Field label="Почему не получилось?" hint="Честно, без осуждения — помогает найти паттерн">
-      <TextInput value={note} onChange={e => setNote(e.target.value)} placeholder="Опиши ситуацию..." multiline rows={4} />
-    </Field>
-    <BigBtn onClick={() => onSave({ checkedToday: true, brokenToday: true, reflection: note })} disabled={!note.trim()}>
-      Зафиксировать
-    </BigBtn>
-  </>;
-}
-
-// ── Check-in: Steps ──────────────────────────────────────
+// ── Check-in: Steps ────────────────────────────────────────
 function CheckInSteps({ form, onSave }) {
   const [steps, setSteps] = useState(form.logged || 0);
-  const target = form.target || 20000;
+  const target = form.target || 15000;
   const pct = Math.min(100, Math.round(steps / target * 100));
-  const pts = steps >= target ? form.pts : Math.round(form.pts * pct / 100);
-  const ok = steps >= target;
-  const presets = [5000, 10000, 15000, 20000, 25000];
 
-  return <>
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginBottom: 20 }}>
-      <div style={{ position: "relative", display: "inline-flex" }}>
-        <Ring pct={pct} size={76} stroke={4} color={ok ? "var(--green)" : "var(--accent)"} />
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: 18, fontWeight: 400, color: "var(--txt)" }}>{(steps/1000).toFixed(1)}k</span>
-          <span style={{ fontSize: 9, color: "var(--txt3)", letterSpacing: 0.5 }}>шагов</span>
+  return (
+    <div style={{ padding: "0 16px 24px" }}>
+      <p style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16 }}>Цель: {target.toLocaleString("ru")} шагов</p>
+      <Field label="Шагов сегодня">
+        <input
+          type="number"
+          value={steps || ""}
+          onChange={e => setSteps(Number(e.target.value))}
+          placeholder="0"
+          style={{
+            width: "100%", padding: "10px 12px", borderRadius: 6,
+            border: "1px solid var(--border)", background: "var(--surface2)",
+            color: "var(--txt)", fontSize: 15, fontFamily: "inherit", outline: "none",
+          }}
+        />
+      </Field>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ width: `${pct}%`, height: "100%", background: pct >= 100 ? "var(--green)" : "var(--accent)", transition: "width .3s" }} />
         </div>
+        <p style={{ fontSize: 12, color: "var(--txt3)", marginTop: 4 }}>{pct}% от цели</p>
       </div>
-      <div>
-        <p style={{ fontSize: 28, fontWeight: 400, color: "var(--txt)", lineHeight: 1 }}>{pts}</p>
-        <p style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>из {form.pts}</p>
-      </div>
+      <button onClick={() => onSave({ logged: steps })} style={btnStyle()}>Сохранить</button>
     </div>
-
-    <Field label="Сколько шагов?">
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-        {presets.map(v => (
-          <button key={v} onClick={() => setSteps(v)} style={{ flex: "1 1 auto", minWidth: 50, padding: "9px 4px", borderRadius: "var(--radius-sm)", border: `1px solid ${steps === v ? "var(--accent)" : "var(--border2)"}`, background: steps === v ? "var(--accent-bg)" : "var(--surface2)", color: steps === v ? "var(--accent)" : "var(--txt2)", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all .12s" }}>{(v/1000)}k</button>
-        ))}
-      </div>
-      <input type="number" value={steps} onChange={e => setSteps(Number(e.target.value))} placeholder="Или введи число" style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 16, fontWeight: 500, outline: "none", width: "100%", boxSizing: "border-box" }} />
-    </Field>
-
-    <BigBtn onClick={() => onSave({ logged: steps, checkedToday: true })} color={ok ? "var(--green)" : "var(--accent)"} disabled={steps === 0}>
-      {ok ? `Цель достигнута — ${pts}` : `Сохранить — ${pts}`}
-    </BigBtn>
-  </>;
+  );
 }
 
-// ── Check-in: Limit ───────────────────────────────────────
-function CheckInLimit({ form, onSave }) {
-  const [spent, setSpent] = useState(form.spent || 0);
-  const limit = form.limitPerDay || 5000;
-  const ok = spent <= limit;
-  const pct = Math.min(100, Math.round(spent / limit * 100));
-  return <>
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: "var(--txt2)" }}>Потрачено</span>
-        <span style={{ fontSize: 15, color: ok ? "var(--green)" : "var(--red)", fontWeight: 400 }}>{spent.toLocaleString()} / {limit.toLocaleString()} ₽</span>
+// ── Check-in: Weight ───────────────────────────────────────
+function CheckInWeight({ form, onSave }) {
+  const [kg, setKg] = useState(form.logged || "");
+  const [fat, setFat] = useState(form.loggedFat || "");
+  const [ropeMin, setRopeMin] = useState(0);
+  const [ropeRunning, setRopeRunning] = useState(false);
+  const ropeRef = useRef(null);
+  const startRef = useRef(null);
+
+  function startRope() {
+    setRopeRunning(true);
+    startRef.current = Date.now() - ropeMin * 60 * 1000;
+    ropeRef.current = setInterval(() => {
+      setRopeMin(Math.floor((Date.now() - startRef.current) / 1000 / 60 * 10) / 10);
+    }, 500);
+  }
+
+  function stopRope() {
+    clearInterval(ropeRef.current);
+    setRopeRunning(false);
+  }
+
+  useEffect(() => () => clearInterval(ropeRef.current), []);
+
+  const goalKg = form.goalKg || 6;
+  const startW = form.startWeight || (kg ? Number(kg) : 80);
+  const diff = form.startWeight && kg ? (form.startWeight - Number(kg)).toFixed(1) : null;
+  const pct = diff ? Math.min(100, Math.round(diff / goalKg * 100)) : 0;
+
+  return (
+    <div style={{ padding: "0 16px 24px" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        <Field label="Вес (кг)" style={{ flex: 1 }}>
+          <input
+            type="number" step="0.1"
+            value={kg}
+            onChange={e => setKg(e.target.value)}
+            placeholder="80.0"
+            style={inputStyle()}
+          />
+        </Field>
+        <Field label="Жир (%)" style={{ flex: 1 }}>
+          <input
+            type="number" step="0.1"
+            value={fat}
+            onChange={e => setFat(e.target.value)}
+            placeholder="20.0"
+            style={inputStyle()}
+          />
+        </Field>
       </div>
-      <div style={{ height: 6, borderRadius: 3, background: "var(--surface3)", overflow: "hidden" }}>
-        <div style={{ height: "100%", borderRadius: 3, background: ok ? "var(--green)" : "var(--red)", width: `${pct}%`, transition: "width .4s ease" }} />
-      </div>
+
+      {diff !== null && (
+        <div style={{ padding: "10px 12px", borderRadius: 6, background: "var(--surface2)", border: "1px solid var(--border)", marginBottom: 12 }}>
+          <p style={{ fontSize: 13, color: diff > 0 ? "var(--green)" : "var(--txt2)", fontWeight: 500, margin: 0 }}>
+            {diff > 0 ? `−${diff} кг от старта` : `+${Math.abs(diff)} кг от старта`}
+          </p>
+          <div style={{ marginTop: 6, height: 2, background: "var(--border)", borderRadius: 1, overflow: "hidden" }}>
+            <div style={{ width: `${pct}%`, height: "100%", background: "var(--green)", transition: "width .3s" }} />
+          </div>
+          <p style={{ fontSize: 11, color: "var(--txt3)", marginTop: 3 }}>{pct}% к цели −{goalKg} кг</p>
+        </div>
+      )}
+
+      <Field label="Скакалка">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em", minWidth: 50 }}>
+            {String(Math.floor(ropeMin)).padStart(2, "0")}:{String(Math.round((ropeMin % 1) * 60)).padStart(2, "0")}
+          </span>
+          {!ropeRunning ? (
+            <button onClick={startRope} style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), padding: "7px 14px", fontSize: 13 }}>Старт</button>
+          ) : (
+            <button onClick={stopRope} style={{ ...btnStyle("var(--red-bg)", "var(--red)", "var(--red)"), padding: "7px 14px", fontSize: 13 }}>Стоп</button>
+          )}
+          <span style={{ fontSize: 12, color: "var(--txt3)" }}>/ 10 мин</span>
+        </div>
+      </Field>
+
+      <button onClick={() => onSave({ logged: Number(kg) || null, loggedFat: Number(fat) || null, ropeMinutes: ropeMin, startWeight: form.startWeight || Number(kg) || null })} style={{ ...btnStyle(), marginTop: 16 }}>Сохранить</button>
     </div>
-    <Field label="Сколько потратил сегодня, ₽">
-      <input type="number" value={spent} onChange={e => setSpent(Number(e.target.value))} style={{ padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 20, fontWeight: 600, outline: "none", width: "100%" }} />
-    </Field>
-    <BigBtn onClick={() => onSave({ spent, checkedToday: true })} color={ok ? "var(--green)" : "var(--red)"}>
-      {ok ? `В рамках — ${form.pts}` : "Превышение — 0"}
-    </BigBtn>
-  </>;
+  );
 }
 
-// ── Long press hook ───────────────────────────────────────
-function useLongPress(callback, delay = 500) {
-  const timerRef = useRef(null);
-  const prevented = useRef(false);
+// ── Check-in: Tasks ────────────────────────────────────────
+function CheckInTasks({ form, onSave }) {
+  const [tasks, setTasks] = useState(() =>
+    (form.tasks || [{ text: "", done: false }, { text: "", done: false }, { text: "", done: false }])
+      .map(t => ({ ...t }))
+  );
+  const [isListening, setIsListening] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const recognitionRef = useRef(null);
+  const [voiceText, setVoiceText] = useState("");
 
-  const start = useCallback((e) => {
-    prevented.current = false;
-    timerRef.current = setTimeout(() => {
-      prevented.current = true;
-      callback(e);
-    }, delay);
-  }, [callback, delay]);
+  function startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("Браузер не поддерживает распознавание речи"); return; }
+    const recognition = new SR();
+    recognition.lang = "ru-RU";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    let finalText = "";
+    recognition.onresult = (e) => {
+      let interim = "";
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + " ";
+        else interim = e.results[i][0].transcript;
+      }
+      setVoiceText((finalText + interim).trim());
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceText(prev => prev);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }
 
-  const cancel = useCallback(() => {
-    clearTimeout(timerRef.current);
-  }, []);
+  function stopVoice() {
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch(e) {} }
+    setIsListening(false);
+  }
 
+  async function generateTasks() {
+    const raw = voiceText.trim();
+    if (!raw) return;
+    setAiLoading(true);
+    try {
+      const text = await askClaude({
+        system: "Ты помощник по планированию. Из диктовки пользователя выдели до 3 задач на сегодня. Ответь ТОЛЬКО JSON-массивом строк без лишнего текста. Пример: [\"Задача 1\", \"Задача 2\"]",
+        prompt: `Диктовка: "${raw}"`,
+        max_tokens: 256,
+      });
+      const arr = JSON.parse(text.trim());
+      if (Array.isArray(arr)) {
+        setTasks(arr.slice(0, 3).map((t, i) => ({ text: t, done: tasks[i]?.done || false })));
+      }
+    } catch (err) {
+      // fallback: use voice text as first task
+      setTasks(prev => [{ text: raw, done: false }, prev[1] || { text: "", done: false }, prev[2] || { text: "", done: false }]);
+    }
+    setAiLoading(false);
+  }
+
+  return (
+    <div style={{ padding: "0 16px 24px" }}>
+      {/* Voice input */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <button
+            onMouseDown={startVoice} onMouseUp={stopVoice}
+            onTouchStart={startVoice} onTouchEnd={stopVoice}
+            style={{
+              ...btnStyle(isListening ? "var(--red-bg)" : "var(--surface2)", isListening ? "var(--red)" : "var(--border)", isListening ? "var(--red)" : "var(--txt2)"),
+              padding: "9px 14px", fontSize: 13,
+            }}
+          >
+            {isListening ? "Запись..." : "Наговорить задачи"}
+          </button>
+          {voiceText && (
+            <button onClick={generateTasks} disabled={aiLoading} style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), padding: "9px 14px", fontSize: 13, flex: 1 }}>
+              {aiLoading ? "..." : "AI → задачи"}
+            </button>
+          )}
+        </div>
+        {voiceText && (
+          <p style={{ fontSize: 12, color: "var(--txt3)", lineHeight: 1.5 }}>{voiceText}</p>
+        )}
+      </div>
+
+      {/* Task list */}
+      {tasks.map((task, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <Checkbox checked={task.done} onChange={() => setTasks(prev => prev.map((t, j) => j === i ? { ...t, done: !t.done } : t))} />
+          <input
+            type="text"
+            value={task.text}
+            onChange={e => setTasks(prev => prev.map((t, j) => j === i ? { ...t, text: e.target.value } : t))}
+            placeholder={`Задача ${i + 1}`}
+            style={{
+              flex: 1, padding: "8px 10px", borderRadius: 6,
+              border: "1px solid var(--border)", background: "var(--surface2)",
+              color: "var(--txt)", fontSize: 14, fontFamily: "inherit",
+              outline: "none", textDecoration: task.done ? "line-through" : "none",
+            }}
+          />
+        </div>
+      ))}
+
+      <button onClick={() => onSave({ tasks })} style={{ ...btnStyle(), marginTop: 8 }}>Сохранить</button>
+    </div>
+  );
+}
+
+// ── Button style helpers ───────────────────────────────────
+function btnStyle(bg = "var(--txt)", border = "var(--txt)", color = "var(--bg)") {
   return {
-    onTouchStart: start,
-    onTouchEnd: cancel,
-    onTouchMove: cancel,
-    onMouseDown: start,
-    onMouseUp: cancel,
-    onMouseLeave: cancel,
-    shouldPreventClick: () => prevented.current,
+    width: "100%", padding: "11px 16px",
+    borderRadius: 6,
+    border: `1px solid ${border}`,
+    background: bg,
+    color,
+    fontSize: 14, fontWeight: 500, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+    transition: "opacity .12s",
+    fontFamily: "inherit",
+    letterSpacing: "-0.01em",
   };
 }
 
-// ── Activity card (wellness style) ────────────────────────
-function ActivityCard({ form, done, onOpen, onLongPress }) {
-  const cat = getCat(form.cat);
-  const tp = getType(form.type);
-  const mealAllDone = form.type === "meal" && form.meals?.every(m => m.done);
-  const isDone = done || mealAllDone;
-
-  // Mini status line
-  let statusText = null;
-  let statusColor = "var(--txt3)";
-  if (form.type === "time" && form.checkedAt) {
-    const diff = timeDiffMin(form.target, form.checkedAt);
-    statusText = form.checkedAt;
-    statusColor = Math.abs(diff) <= 5 ? "var(--green)" : diff > 0 ? "var(--gold)" : "var(--blue)";
-  }
-  if (form.type === "duration" && form.checkedToday) {
-    statusText = `${form.logged} мин`;
-    statusColor = "var(--blue)";
-  }
-  if (form.type === "steps" && form.checkedToday) {
-    statusText = `${(form.logged/1000).toFixed(1)}k`;
-    statusColor = form.logged >= (form.target || 20000) ? "var(--green)" : "var(--accent)";
-  }
-  if (form.type === "meal") {
-    const cnt = form.meals?.filter(m => m.done).length || 0;
-    statusText = `${cnt}/3`;
-    statusColor = cnt === 3 ? "var(--green)" : "var(--txt3)";
-  }
-
-  const longPress = useLongPress(() => onLongPress?.(), 500);
-
-  // Mini bar for streaks
-  const maxStreak = 60;
-  const streakPct = Math.min(100, Math.round(form.streak / maxStreak * 100));
-
-  return (
-    <Card onClick={(e) => { if (!longPress.shouldPreventClick()) onOpen(); }} data-form={form.type}
-      {...{ onTouchStart: longPress.onTouchStart, onTouchEnd: longPress.onTouchEnd, onTouchMove: longPress.onTouchMove, onMouseDown: longPress.onMouseDown, onMouseUp: longPress.onMouseUp, onMouseLeave: longPress.onMouseLeave }}
-      style={{
-      marginBottom: 8,
-      opacity: isDone && form.type !== "meal" ? 0.68 : 1,
-      borderLeft: `3px solid ${isDone ? "var(--green)" : cat.color}`,
-      transition: "opacity .3s",
-    }} pad="14px 16px">
-      <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
-        <div style={{
-          width: 42, height: 42, borderRadius: 13,
-          background: isDone ? "var(--green-bg)" : `${cat.color}18`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 18, flexShrink: 0,
-          border: `1px solid ${isDone ? "var(--green)" : `${cat.color}28`}`,
-        }}>
-          {isDone ? <span style={{ color: "var(--green)", fontSize: 16, fontWeight: 700 }}>✓</span> : <span>{tp.icon}</span>}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: isDone ? "var(--green)" : "var(--txt)" }}>
-              {form.name}
-            </span>
-            {statusText && (
-              <span style={{ fontSize: 11, fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: "2px 7px", borderRadius: 6 }}>{statusText}</span>
-            )}
-          </div>
-
-          {/* Streak bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--surface3)", overflow: "hidden" }}>
-              <div style={{
-                height: "100%", borderRadius: 2,
-                background: isDone ? "var(--green)" : cat.color,
-                width: `${streakPct}%`,
-                transition: "width .5s ease",
-              }} />
-            </div>
-            <span style={{
-              fontSize: 10, color: "var(--txt3)", fontWeight: 600,
-              minWidth: 28, textAlign: "right", letterSpacing: 0.2,
-            }}>
-              {form.streak}д
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Meal progress */}
-      {form.type === "meal" && form.meals && (
-        <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
-          {form.meals.map((m, i) => (
-            <div key={i} style={{
-              flex: 1, height: 4, borderRadius: 2,
-              background: m.done ? "var(--green)" : "var(--surface3)",
-              transition: "background .3s",
-            }} />
-          ))}
-        </div>
-      )}
-    </Card>
-  );
+function inputStyle() {
+  return {
+    width: "100%", padding: "10px 12px", borderRadius: 6,
+    border: "1px solid var(--border)", background: "var(--surface2)",
+    color: "var(--txt)", fontSize: 15, fontFamily: "inherit", outline: "none",
+  };
 }
 
-// ── Quick edit sheet for form settings ─────────────────────
-function QuickEditSheet({ form, onSave, onClose, onDelete }) {
-  const [name, setName] = useState(form?.name || "");
-  const [target, setTarget] = useState(form?.target || "");
-  if (!form) return null;
-  return (
-    <Sheet open title="Редактировать" onClose={onClose}>
-      <Field label="Название">
-        <TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Название формы" />
-      </Field>
-      {(form.type === "time") && (
-        <Field label="Целевое время">
-          <TimeInput value={target} onChange={e => setTarget(e.target.value)} />
-        </Field>
-      )}
-      {(form.type === "duration") && (
-        <Field label="Цель (минуты)">
-          <input type="number" value={target} onChange={e => setTarget(Number(e.target.value))}
-            style={{ width: "100%", padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 16, fontWeight: 500, outline: "none", boxSizing: "border-box" }} />
-        </Field>
-      )}
-      {(form.type === "steps") && (
-        <Field label="Цель (шагов)">
-          <input type="number" value={target} onChange={e => setTarget(Number(e.target.value))}
-            style={{ width: "100%", padding: "11px 14px", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", background: "var(--surface2)", color: "var(--txt)", fontSize: 16, fontWeight: 500, outline: "none", boxSizing: "border-box" }} />
-        </Field>
-      )}
-      <BigBtn onClick={() => { onSave({ name, target }); onClose(); }} color="var(--accent)">Сохранить</BigBtn>
-      <button onClick={() => { onDelete(); onClose(); }} style={{
-        width: "100%", padding: "12px", marginTop: 12, borderRadius: "var(--radius-sm)",
-        border: "1px solid var(--red)", background: "transparent",
-        color: "var(--red)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-      }}>
-        Удалить форму
-      </button>
-    </Sheet>
-  );
-}
-
-// ── TODAY TAB ─────────────────────────────────────────────
+// ── TodayTab ───────────────────────────────────────────────
 export default function TodayTab({ forms, setForms, userId, userName }) {
-  const [activeId, setActiveId] = useState(null);
-  const [editId, setEditId] = useState(null);
+  const [activeForm, setActiveForm] = useState(null);
   const [sessionForm, setSessionForm] = useState(null);
-  const score = calcDailyScore(forms);
-  const maxScore = forms.reduce((a, f) => a + f.pts, 0);
-  const pct = maxScore ? Math.round(score / maxScore * 100) : 0;
-  const doneCount = forms.filter(f => f.checkedToday).length;
-  const hasBroken = forms.some(f => f.brokenToday);
 
-  function handleSave(id, patch) {
-    setForms(fs => fs.map(f => f.id === id ? { ...f, ...patch, checkedToday: patch.checkedToday !== undefined ? patch.checkedToday : true } : f));
-    setActiveId(null);
+  function openForm(form) {
+    setActiveForm(form);
   }
 
-  const open = activeId ? forms.find(f => f.id === activeId) : null;
-  const nonMealForms = forms.filter(f => f.type !== "meal");
-  const pending = nonMealForms.filter(f => !f.checkedToday);
-  const done = nonMealForms.filter(f => f.checkedToday);
+  function closeForm() {
+    setActiveForm(null);
+  }
 
-  return <>
-    {/* Mascot hero */}
-    <Card style={{ marginBottom: 16, overflow: "hidden" }} pad="0">
-      <div style={{
-        background: "linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%)",
-      }}>
-        <Mascot pct={pct} forms={forms} hasBroken={hasBroken} />
+  function quickCheck(form) {
+    if (form.type === "boolean") {
+      setForms(prev => prev.map(f => f.id === form.id ? {
+        ...f,
+        checkedToday: !f.checkedToday,
+        brokenToday: false,
+        streak: !f.checkedToday ? (f.streak || 0) + 1 : Math.max(0, (f.streak || 1) - 1),
+      } : f));
+    } else if (form.type === "time") {
+      openForm(form);
+    }
+  }
 
-        {/* Daily progress bar */}
-        <div style={{ padding: "0 20px 18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: "var(--txt3)", letterSpacing: 1, textTransform: "uppercase" }}>Прогресс дня</span>
-            <span style={{
-              fontSize: 11, fontWeight: 700,
-              color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)",
-              transition: "color .6s",
-              background: pct >= 80 ? "var(--green-bg)" : hasBroken ? "var(--red-bg)" : "var(--accent-bg)",
-              padding: "2px 7px", borderRadius: 6,
-            }}>{pct}%</span>
-          </div>
-          <div style={{ height: 6, borderRadius: 4, background: "var(--surface3)", overflow: "hidden" }}>
-            <div style={{
-              height: "100%", borderRadius: 4,
-              background: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)",
-              width: `${pct}%`,
-              transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background .6s",
-            }} />
-          </div>
-        </div>
+  function saveForm(formId, updates) {
+    setForms(prev => prev.map(f => {
+      if (f.id !== formId) return f;
+      const wasChecked = f.checkedToday;
+      const nowChecked = updates.checkedToday !== undefined ? updates.checkedToday : true;
+      return {
+        ...f,
+        ...updates,
+        checkedToday: nowChecked,
+        streak: nowChecked && !wasChecked ? (f.streak || 0) + 1 : f.streak,
+        history: nowChecked && !wasChecked
+          ? [...(f.history || []), { date: new Date().toISOString().slice(0, 10), ...updates }]
+          : f.history,
+      };
+    }));
+    setActiveForm(null);
+  }
+
+  function startSession(form) {
+    setActiveForm(null);
+    setSessionForm(form);
+  }
+
+  function onSessionDone(formId, mins) {
+    setForms(prev => prev.map(f => f.id !== formId ? f : {
+      ...f,
+      logged: mins,
+      checkedToday: mins >= (f.target || 60),
+      streak: mins >= (f.target || 60) ? (f.streak || 0) + 1 : f.streak,
+      history: mins >= (f.target || 60) ? [...(f.history || []), { date: new Date().toISOString().slice(0, 10), logged: mins }] : f.history,
+    }));
+    setSessionForm(null);
+  }
+
+  // Section headers mapping
+  const sections = [
+    { label: "Режим", ids: ["f1", "f2"] },
+    { label: "Тело", ids: ["f3", "f4", "f5", "f7"] },
+    { label: "Разум", ids: ["f6", "f8", "f9"] },
+  ];
+
+  const formMap = Object.fromEntries(forms.map(f => [f.id, f]));
+
+  return (
+    <>
+      <div className="fade-up">
+        {sections.map(section => {
+          const sectionForms = section.ids.map(id => formMap[id]).filter(Boolean);
+          if (!sectionForms.length) return null;
+          return (
+            <div key={section.label}>
+              <div style={{
+                padding: "12px 16px 4px",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--txt3)",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}>
+                {section.label}
+              </div>
+              <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+                {sectionForms.map(form => (
+                  <HabitRow
+                    key={form.id}
+                    form={form}
+                    onOpen={openForm}
+                    onQuickCheck={quickCheck}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Stats row */}
-      <div style={{ display: "flex", borderTop: "1px solid var(--border)", padding: "14px 18px", gap: 0 }}>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 26, fontWeight: 600, lineHeight: 1, transition: "color .6s", color: pct >= 80 ? "var(--green)" : hasBroken ? "var(--red)" : "var(--accent)", letterSpacing: -0.5 }}>{score}</p>
-          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 4, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 500 }}>очков</p>
-        </div>
-        <div style={{ width: 1, background: "var(--border)" }} />
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 26, fontWeight: 600, color: "var(--txt)", lineHeight: 1, letterSpacing: -0.5 }}>{doneCount}<span style={{ fontSize: 14, fontWeight: 400, color: "var(--txt3)" }}>/{forms.length}</span></p>
-          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 4, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 500 }}>форм</p>
-        </div>
-        <div style={{ width: 1, background: "var(--border)" }} />
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <p style={{ fontSize: 26, fontWeight: 600, color: "var(--txt)", lineHeight: 1, letterSpacing: -0.5 }}>{forms.reduce((a, f) => Math.max(a, f.streak), 0)}</p>
-          <p style={{ fontSize: 10, color: "var(--txt3)", marginTop: 4, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 500 }}>стрик</p>
-        </div>
-      </div>
-    </Card>
-
-    {/* Activity section header */}
-    <div style={{
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      marginBottom: 10, padding: "0 2px",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--txt2)", letterSpacing: 0.8, textTransform: "uppercase" }}>
-          Активности
-        </p>
-        {pending.length > 0 && (
-          <span style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 18, height: 18, borderRadius: "50%",
-            background: "var(--accent)", color: "#fff",
-            fontSize: 10, fontWeight: 700, lineHeight: 1,
-          }}>
-            {pending.length}
-          </span>
+      {/* Check-in Sheet */}
+      <Sheet
+        open={!!activeForm}
+        onClose={closeForm}
+        title={activeForm?.name}
+      >
+        {activeForm?.type === "time" && (
+          <CheckInTime form={activeForm} onSave={(u) => saveForm(activeForm.id, u)} onClose={closeForm} />
         )}
-      </div>
-      <p style={{ fontSize: 11, color: "var(--txt3)", fontWeight: 500 }}>
-        {new Date().toLocaleDateString("ru", { weekday: "short", day: "numeric", month: "short" })}
-      </p>
-    </div>
-
-    {pending.map(f => <ActivityCard key={f.id} form={f} onOpen={() => setActiveId(f.id)} onLongPress={() => setEditId(f.id)} />)}
-
-    {done.length > 0 && (
-      <>
-        <p style={{
-          fontSize: 11, fontWeight: 600, color: "var(--green)",
-          letterSpacing: 1, textTransform: "uppercase",
-          margin: "16px 2px 10px",
-        }}>
-          Выполнено
-        </p>
-        {done.map(f => <ActivityCard key={f.id} form={f} done onOpen={() => setActiveId(f.id)} onLongPress={() => setEditId(f.id)} />)}
-      </>
-    )}
-
-    {/* Meal Tracker — as a card like other activities */}
-    <MealTracker userId={userId} />
-
-    {open && (
-      <Sheet open title={open.name} onClose={() => setActiveId(null)}>
-        {open.type === "time"     && <CheckInTime     form={open} onSave={p => handleSave(open.id, p)} onClose={() => setActiveId(null)} />}
-        {open.type === "duration" && <CheckInDuration form={open} onSave={p => handleSave(open.id, p)} onStartSession={() => setSessionForm(open)} />}
-        {open.type === "boolean"  && <CheckInBoolean  form={open} onSave={p => handleSave(open.id, p)} />}
-        {open.type === "steps"    && <CheckInSteps    form={open} onSave={p => handleSave(open.id, p)} />}
-        {open.type === "limit"    && <CheckInLimit    form={open} onSave={p => handleSave(open.id, p)} />}
+        {activeForm?.type === "duration" && (
+          <CheckInDuration
+            form={activeForm}
+            onSave={(u) => saveForm(activeForm.id, u)}
+            onStartSession={() => startSession(activeForm)}
+          />
+        )}
+        {activeForm?.type === "steps" && (
+          <CheckInSteps form={activeForm} onSave={(u) => saveForm(activeForm.id, u)} />
+        )}
+        {activeForm?.type === "weight" && (
+          <CheckInWeight form={activeForm} onSave={(u) => saveForm(activeForm.id, { ...u, checkedToday: !!u.logged })} />
+        )}
+        {activeForm?.type === "tasks" && (
+          <CheckInTasks form={activeForm} onSave={(u) => saveForm(activeForm.id, { ...u, checkedToday: u.tasks?.some(t => t.done) })} />
+        )}
+        {activeForm?.type === "meal" && (
+          <div style={{ padding: "0 0 24px" }}>
+            <MealTracker userId={userId} />
+          </div>
+        )}
+        {activeForm?.type === "boolean" && (
+          <div style={{ padding: "0 16px 24px" }}>
+            <p style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16 }}>{activeForm.principle}</p>
+            <button onClick={() => saveForm(activeForm.id, { checkedToday: true, brokenToday: false })} style={btnStyle()}>
+              Выполнено
+            </button>
+            <button onClick={() => saveForm(activeForm.id, { checkedToday: true, brokenToday: true })} style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--red)"), marginTop: 8 }}>
+              Не выполнено
+            </button>
+          </div>
+        )}
       </Sheet>
-    )}
 
-    {sessionForm && (
-      <SessionTimer
-        form={sessionForm}
-        targetMins={sessionForm.target || 60}
-        onFinish={(sessionMins) => {
-          handleSave(sessionForm.id, { logged: sessionMins, checkedToday: true });
-          setSessionForm(null);
-        }}
-        onClose={() => setSessionForm(null)}
-      />
-    )}
-
-    {/* Quick edit */}
-    {editId && (
-      <QuickEditSheet
-        form={forms.find(f => f.id === editId)}
-        onSave={(patch) => setForms(fs => fs.map(f => f.id === editId ? { ...f, ...patch } : f))}
-        onClose={() => setEditId(null)}
-        onDelete={() => setForms(fs => fs.filter(f => f.id !== editId))}
-      />
-    )}
-
-    {/* Foma Chat */}
-    <Card style={{ marginTop: 16 }} pad="16px">
-      <FomaChat userId={userId} userName={userName} forms={forms} />
-    </Card>
-  </>;
+      {/* Session Timer */}
+      {sessionForm && (
+        <SessionTimer
+          form={sessionForm}
+          onDone={(mins) => onSessionDone(sessionForm.id, mins)}
+          onClose={() => setSessionForm(null)}
+        />
+      )}
+    </>
+  );
 }
