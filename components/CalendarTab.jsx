@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { askClaude } from "@/lib/helpers";
 import { Card, BigBtn, Sheet, SectionLabel } from "@/components/ui";
 import { MONTH_NAMES, WEEK_DAYS } from "@/lib/data";
+import ChallengeWidget from "@/components/ChallengeWidget";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -397,7 +398,7 @@ export default function CalendarTab({ userId, userName, forms }) {
       )}
 
       {section === "tasks" && <TasksSection userId={userId} />}
-      {section === "exp" && null}
+      {section === "exp" && <ChallengeWidget />}
 
       <DayDetail date={selectedDay} onClose={() => setSelectedDay(null)} userId={userId} />
     </>

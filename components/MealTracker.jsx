@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocalState } from "@/lib/hooks";
 import { supabase } from "@/lib/supabase";
-import { askClaude } from "@/lib/helpers";
+import { askClaude, recognizeFood } from "@/lib/helpers";
 import { mealAnalysisPrompt, dailySummaryPrompt } from "@/lib/ai-context";
 import { Card, Sheet, BigBtn } from "@/components/ui";
 
@@ -212,23 +212,31 @@ export default function MealTracker({ userId }) {
     if (photos.length === 0 && !description.trim()) return;
     setAnalyzing(true);
     try {
-      const content = [];
-      photos.forEach(p => {
-        content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.split(",")[1] } });
-      });
-      content.push({ type: "text", text: description.trim() || "Проанализируй эту еду на фото. Если несколько фото — это один приём пищи, суммируй всё." });
-
-      const body = {
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 512,
-        system: mealAnalysisPrompt(),
-        messages: [{ role: "user", content }],
-      };
-      const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const data = await res.json();
-      const text = data.content?.find(b => b.type === "text")?.text || "";
-      const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      setResult(JSON.parse(cleaned));
+      let parsed;
+      if (photos.length > 0) {
+        // Use GPT-4o Vision for photo recognition
+        parsed = await recognizeFood(photos[0]);
+        // If user added a description, ask Claude to refine
+        if (description.trim() && parsed.dish) {
+          const refined = await askClaude({
+            system: mealAnalysisPrompt(),
+            prompt: `Предыдущий анализ фото: ${JSON.stringify(parsed)}\nУточнение пользователя: "${description.trim()}"\nПересчитай и верни JSON в том же формате: {"dish":"...","calories":0,"protein":0,"fat":0,"carbs":0,"fiber":0,"meal_type":"breakfast|lunch|dinner|snack","comment":"..."}`,
+            max_tokens: 512,
+          });
+          const cleaned = refined.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          parsed = JSON.parse(cleaned);
+        }
+      } else {
+        // Text-only analysis via Claude
+        const text = await askClaude({
+          system: mealAnalysisPrompt(),
+          prompt: description.trim(),
+          max_tokens: 512,
+        });
+        const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        parsed = JSON.parse(cleaned);
+      }
+      setResult(parsed);
     } catch (err) {
       setResult({ dish: "Ошибка", calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, comment: err.message, meal_type: "snack" });
     }
