@@ -129,6 +129,81 @@ export default function SettingsTab({ forms, setForms, theme, setTheme, userName
         ))}
       </div>
 
+      <SectionLabel>Apple Health</SectionLabel>
+      <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ padding: "14px 16px" }}>
+          <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "var(--txt)" }}>
+            Автоматический импорт шагов и сна
+          </p>
+          <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--txt2)", lineHeight: 1.6 }}>
+            Создай автоматизацию в приложении <b>Быстрые команды</b> (iOS 13+), которая каждый вечер отправляет данные из Apple Health в Forma.
+          </p>
+
+          {/* Step 1 */}
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "var(--txt)" }}>
+              Шаг 1 — Создай команду
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--txt2)", lineHeight: 1.6 }}>
+              Приложение Быстрые команды → «+» → добавь действия:
+            </p>
+            <ol style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 12, color: "var(--txt2)", lineHeight: 1.9 }}>
+              <li>Здоровье → <b>Найти образцы здоровья</b> → Тип: Шаги, Сортировка: по дате (новые), Лимит: 1</li>
+              <li>Переменные → <b>Получить значение из</b> → Шаги (сохрани в переменную «Steps»)</li>
+              <li>Web → <b>Открыть URL</b> → вставь ссылку ниже</li>
+            </ol>
+          </div>
+
+          {/* URL block */}
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "var(--txt)" }}>
+              Шаг 2 — URL для команды
+            </p>
+            <div
+              onClick={() => {
+                const url = `${window.location.origin}/api/health?steps={Steps}&date={Current Date}`;
+                navigator.clipboard?.writeText(url);
+              }}
+              style={{ padding: "10px 12px", borderRadius: 6, background: "var(--surface2)", border: "1px solid var(--border)", cursor: "pointer" }}
+            >
+              <p style={{ margin: 0, fontSize: 11, color: "var(--txt2)", fontFamily: "monospace", lineHeight: 1.6, wordBreak: "break-all" }}>
+                {typeof window !== "undefined" ? window.location.origin : "https://forma-black.vercel.app"}/api/health?steps=&#123;Steps&#125;&date=&#123;Current Date&#125;
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--accent)" }}>Нажми, чтобы скопировать</p>
+            </div>
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--txt3)" }}>
+              Замени <code style={{ background: "var(--surface2)", borderRadius: 3, padding: "0 4px" }}>&#123;Steps&#125;</code> и <code style={{ background: "var(--surface2)", borderRadius: 3, padding: "0 4px" }}>&#123;Current Date&#125;</code> на соответствующие переменные из Быстрых команд.
+            </p>
+          </div>
+
+          {/* Sleep */}
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "var(--txt)" }}>
+              Шаг 3 — Добавь данные сна (опционально)
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--txt2)", lineHeight: 1.6 }}>
+              Добавь в URL параметры:
+            </p>
+            <div style={{ marginTop: 6, padding: "8px 10px", borderRadius: 6, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "monospace", color: "var(--txt2)", lineHeight: 1.8 }}>
+                &amp;wakeTime=&#123;Время подъёма, ЧЧ:ММ&#125;<br />
+                &amp;bedTime=&#123;Время отбоя, ЧЧ:ММ&#125;
+              </p>
+            </div>
+          </div>
+
+          {/* Automation */}
+          <div>
+            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "var(--txt)" }}>
+              Шаг 4 — Автоматизация
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--txt2)", lineHeight: 1.6 }}>
+              Быстрые команды → Автоматизации → «+» → Время суток (например, 22:00) → выбери свою команду. Данные будут импортироваться каждый вечер автоматически.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div style={{ padding: "16px" }}>
         <button
           onClick={saveSettings}

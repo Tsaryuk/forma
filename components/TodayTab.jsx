@@ -360,8 +360,12 @@ function CheckInDuration({ form, onSave, onStartSession }) {
 // ── Check-in: Steps ────────────────────────────────────────
 function CheckInSteps({ form, onSave }) {
   const [steps, setSteps] = useState(form.logged || 0);
+  const [showWatch, setShowWatch] = useState(false);
   const target = form.target || 15000;
   const pct = Math.min(100, Math.round(steps / target * 100));
+  const shortcutUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/api/health?steps={Количество шагов}&wakeTime={Время подъёма HH:MM}&bedTime={Время отбоя HH:MM}&date={Дата YYYY-MM-DD}`
+    : "";
 
   return (
     <div style={{ padding: "0 16px 24px" }}>
@@ -387,20 +391,40 @@ function CheckInSteps({ form, onSave }) {
       </div>
       <button onClick={() => onSave({ logged: steps })} style={btnStyle()}>Сохранить</button>
       <button
-        onClick={() => {
-          const today = new Date().toISOString().slice(0, 10);
-          window.location.href = `/api/health?health_import=1&steps=${steps}&date=${today}`;
-        }}
+        onClick={() => setShowWatch(v => !v)}
         style={{ ...btnStyle("var(--surface2)", "var(--border)", "var(--txt)"), marginTop: 8 }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-          <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          <rect x="5" y="2" width="14" height="20" rx="2" />
+          <path d="M12 18h.01" />
         </svg>
         Загрузить с Watch
       </button>
-      <p style={{ fontSize: 11, color: "var(--txt3)", textAlign: "center", marginTop: 8 }}>
-        Настройка автоимпорта — в разделе Настройки → Apple Health
-      </p>
+      {showWatch && (
+        <div style={{ marginTop: 12, padding: "12px", borderRadius: 8, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: "var(--txt)" }}>iOS Shortcut</p>
+          <p style={{ margin: "0 0 8px", fontSize: 12, color: "var(--txt2)", lineHeight: 1.5 }}>
+            Создай автоматизацию в приложении <b>Быстрые команды</b>:
+          </p>
+          <ol style={{ margin: "0 0 10px", paddingLeft: 16, fontSize: 12, color: "var(--txt2)", lineHeight: 1.8 }}>
+            <li>Получи «Количество шагов» из Health</li>
+            <li>Добавь действие «Открыть URL» со ссылкой ниже</li>
+            <li>Запускай вручную или по расписанию каждый вечер</li>
+          </ol>
+          <div
+            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/api/health?steps={Количество шагов}&date={Сегодня}`)}
+            style={{ padding: "8px 10px", borderRadius: 6, background: "var(--bg)", border: "1px solid var(--border)", cursor: "pointer", wordBreak: "break-all" }}
+          >
+            <p style={{ margin: 0, fontSize: 11, color: "var(--txt3)", fontFamily: "monospace", lineHeight: 1.5 }}>
+              {window.location.origin}/api/health?steps=&#123;шаги&#125;&date=&#123;дата&#125;
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--accent)" }}>Нажми, чтобы скопировать</p>
+          </div>
+          <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--txt3)" }}>
+            Полная инструкция: Настройки → Apple Health
+          </p>
+        </div>
+      )}
     </div>
   );
 }
